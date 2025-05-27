@@ -11,14 +11,23 @@ export interface MeetingRoom {
     participants: string[];
 }
 
+export interface MeetingRoomArea{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+}
+
 interface MeetingRoomState {
     meetingRooms : MeetingRoom[];
     currentMeetingRoomId: string | null;
+    meetingRoomAreas: MeetingRoomArea[];
 }
 
 const initialState: MeetingRoomState = {
     meetingRooms: [],
     currentMeetingRoomId: null,
+    meetingRoomAreas: []
 };
 
 
@@ -46,6 +55,16 @@ export const meetingRoomSlice = createSlice({
         setCurrentMeetingRoomId: (state, action: PayloadAction<string | null>) => {
             state.currentMeetingRoomId = action.payload;
         },
+        addMeetingRoomArea: (state, action: PayloadAction<MeetingRoomArea>) => {
+            state.meetingRoomAreas.push(action.payload);
+        },
+        updateMeetingRoomArea: (state, action: PayloadAction<MeetingRoomArea>) => {
+            const idx = state.meetingRoomAreas.findIndex(area => area.meetingRoomId === action.payload.meetingRoomId);
+            if (idx !== -1) state.meetingRoomAreas[idx] = action.payload;
+        },
+        removeMeetingRoomArea: (state, action: PayloadAction<string>) => {
+            state.meetingRoomAreas = state.meetingRoomAreas.filter(area => area.meetingRoomId !== action.payload);
+        },
 
     }
 });
@@ -56,6 +75,9 @@ export const {
     updateMeetingRoom,
     removeMeetingRoom,
     setCurrentMeetingRoomId
+    addMeetingRoomArea,
+    updateMeetingRoomArea,
+    removeMeetingRoomArea
 } = meetingRoomSlice.actions;
 
 export default meetingRoomSlice.reducer;
