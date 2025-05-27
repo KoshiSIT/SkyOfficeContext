@@ -5,11 +5,13 @@ import computerReducer from './ComputerStore'
 import whiteboardReducer from './WhiteboardStore'
 import chatReducer from './ChatStore'
 import roomReducer from './RoomStore'
+import meetingRoomReducer from './MeetingRoomStore'
 
 enableMapSet()
 
 const store = configureStore({
   reducer: {
+    meetingRoom: meetingRoomReducer,
     user: userReducer,
     computer: computerReducer,
     whiteboard: whiteboardReducer,

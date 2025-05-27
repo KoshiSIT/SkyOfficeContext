@@ -1,17 +1,18 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
-export type MeetingRoomMode = 'open' | private' | 'secret';
+export type MeetingRoomMode = 'open' | 'private' | 'secret';
 
 export interface MeetingRoom {
     id: string;
     name: string;
     mode: MeetingRoomMode;
     hostUserId: string;
-    invitedUssers: string[];
+    invitedUsers: string[];
     participants: string[];
 }
 
 export interface MeetingRoomArea{
+    meetingRoomId: string;
     x: number;
     y: number;
     width: number;
@@ -27,15 +28,15 @@ interface MeetingRoomState {
 const initialState: MeetingRoomState = {
     meetingRooms: [],
     currentMeetingRoomId: null,
-    meetingRoomAreas: []
+    meetingRoomAreas: [],
 };
 
 
 export const meetingRoomSlice = createSlice({
     name: 'meetingRoom',
-    currentMeetingRoomId: null,
+    initialState,
     reducers: {
-        setMeetingRooms: (staet, action: PlayloadAction>MeetingRoom[]>) => {
+        setMeetingRooms: (state, action: PayloadAction<MeetingRoom[]>) => {
             state.meetingRooms = action.payload;
         },
         addMeetingRoom: (state, action: PayloadAction<MeetingRoom>) => {
@@ -74,10 +75,10 @@ export const {
     addMeetingRoom,
     updateMeetingRoom,
     removeMeetingRoom,
-    setCurrentMeetingRoomId
+    setCurrentMeetingRoomId,
     addMeetingRoomArea,
     updateMeetingRoomArea,
-    removeMeetingRoomArea
+    removeMeetingRoomArea,
 } = meetingRoomSlice.actions;
 
 export default meetingRoomSlice.reducer;

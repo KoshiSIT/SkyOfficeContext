@@ -22,8 +22,11 @@ import store from '../stores'
 import { setFocused, setShowChat } from '../stores/ChatStore'
 import { NavKeys, Keyboard } from '../../../types/KeyboardState'
 
+import { setCurrentMeetingRoomId } from '../stores/MeetingRoomStore'
+
 export default class Game extends Phaser.Scene {
   network!: Network
+  private testAreaGraphics!: Phaser.GameObjects.Graphics
   private cursors!: NavKeys
   private keyE!: Phaser.Input.Keyboard.Key
   private keyR!: Phaser.Input.Keyboard.Key
@@ -159,7 +162,17 @@ export default class Game extends Phaser.Scene {
       undefined,
       this
     )
-
+    // **********************
+    // Meeting room areas
+    this.meetingRoomAreas = store.getState().meetingRoom.meetingRoomAreas
+    store.subscribe(() => {
+      this.meetingRoomAreas = store.getState().meetingRoom.meetingRoomAreas
+    })
+    const testArea = { x: 192, y: 482, width: 448, height: 296, meetingRoomId: 'MeetingRoom' }
+    this.testAreaGraphics = this.add.graphics()
+    this.testAreaGraphics.lineStyle(3, 0xff0000, 1) // 赤・太さ3
+    this.testAreaGraphics.strokeRect(testArea.x, testArea.y, testArea.width, testArea.height)
+    //**********************
     // register network event listeners
     this.network.onPlayerJoined(this.handlePlayerJoined, this)
     this.network.onPlayerLeft(this.handlePlayerLeft, this)
@@ -280,10 +293,22 @@ export default class Game extends Phaser.Scene {
     const otherPlayer = this.otherPlayerMap.get(playerId)
     otherPlayer?.updateDialogBubble(content)
   }
+  private checkPlayerInMeetingRoom(x: number, y: number) {
+    // console.log('checkPlayerInMeetingRoom', x, y, this.currentMeetingRoomId)
+    const area = this.meetingRoomAreas.find(
+      (a) => x >= a.x && x <= a.x + a.width && y >= a.y && y <= a.y + a.height
+    )
+    const nextId = area ? area.meetingRoomId : null
+    if (nextId !== this.currentMeetingRoomId) {
+      store.dispatch(setCurrentMeetingRoomId(nextId))
+      this.currentMeetingRoomId = nextId
+    }
+  }
 
   update(t: number, dt: number) {
     if (this.myPlayer && this.network) {
       this.playerSelector.update(this.myPlayer, this.cursors)
+      this.checkPlayerInMeetingRoom(this.myPlayer.x, this.myPlayer.y)
       this.myPlayer.update(this.playerSelector, this.cursors, this.keyE, this.keyR, this.network)
     }
   }
