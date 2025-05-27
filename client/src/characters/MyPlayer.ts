@@ -20,6 +20,7 @@ export default class MyPlayer extends Player {
   private playContainerBody: Phaser.Physics.Arcade.Body
   private chairOnSit?: Chair
   public joystickMovement?: JoystickMovement
+  public currentMeetingRoomId?: string | null = null
   constructor(
     scene: Phaser.Scene,
     x: number,
@@ -30,6 +31,7 @@ export default class MyPlayer extends Player {
   ) {
     super(scene, x, y, texture, id, frame)
     this.playContainerBody = this.playerContainer.body as Phaser.Physics.Arcade.Body
+    this.currentMeetingRoomId = null
   }
 
   setPlayerName(name: string) {

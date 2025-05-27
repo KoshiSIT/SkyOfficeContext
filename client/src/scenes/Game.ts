@@ -21,12 +21,17 @@ import { ItemType } from '../../../types/Items'
 import store from '../stores'
 import { setFocused, setShowChat } from '../stores/ChatStore'
 import { NavKeys, Keyboard } from '../../../types/KeyboardState'
+import { createMeetingRoomWithArea } from '../utils/mRoom'
 
-import { setCurrentMeetingRoomId } from '../stores/MeetingRoomStore'
+import { setCurrentMeetingRoomId,
+    MeetingRoom,
+    MeetingRoomArea,
+    
+} from '../stores/MeetingRoomStore'
 
 export default class Game extends Phaser.Scene {
   network!: Network
-  private testAreaGraphics!: Phaser.GameObjects.Graphics
+  private meetAreaGraphics!: Phaser.GameObjects.Graphics
   private cursors!: NavKeys
   private keyE!: Phaser.Input.Keyboard.Key
   private keyR!: Phaser.Input.Keyboard.Key
@@ -37,6 +42,7 @@ export default class Game extends Phaser.Scene {
   private otherPlayerMap = new Map<string, OtherPlayer>()
   computerMap = new Map<string, Computer>()
   private whiteboardMap = new Map<string, Whiteboard>()
+  meetingRoomAreas: MeetingRoomArea[] = []
 
   constructor() {
     super('game')
@@ -168,10 +174,20 @@ export default class Game extends Phaser.Scene {
     store.subscribe(() => {
       this.meetingRoomAreas = store.getState().meetingRoom.meetingRoomAreas
     })
-    const testArea = { x: 192, y: 482, width: 448, height: 296, meetingRoomId: 'MeetingRoom' }
-    this.testAreaGraphics = this.add.graphics()
-    this.testAreaGraphics.lineStyle(3, 0xff0000, 1) // 赤・太さ3
-    this.testAreaGraphics.strokeRect(testArea.x, testArea.y, testArea.width, testArea.height)
+    const { room, area } = createMeetingRoomWithArea(
+      'Meeting Room',
+      'open',
+      'hostUserId',
+      192,
+      482,
+      448,
+      296
+    )
+    this.meetAreaGraphics = this.add.graphics()
+    this.meetAreaGraphics.setDepth(1000)
+    this.meetAreaGraphics.lineStyle(3, 0xff0000, 1)
+    this.meetAreaGraphics.strokeRect(area.x, area.y, area.width, area.height)
+
     //**********************
     // register network event listeners
     this.network.onPlayerJoined(this.handlePlayerJoined, this)
@@ -299,9 +315,10 @@ export default class Game extends Phaser.Scene {
       (a) => x >= a.x && x <= a.x + a.width && y >= a.y && y <= a.y + a.height
     )
     const nextId = area ? area.meetingRoomId : null
-    if (nextId !== this.currentMeetingRoomId) {
-      store.dispatch(setCurrentMeetingRoomId(nextId))
-      this.currentMeetingRoomId = nextId
+    if (nextId !== this.myPlayer.currentMeetingRoomId) {
+        console.log('Meeting room changed:', nextId)
+      this.myPlayer.currentMeetingRoomId = nextId
+      console.log(this.myPlayer.currentMeetingRoomId)
     }
   }
 
