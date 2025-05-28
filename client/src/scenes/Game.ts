@@ -23,19 +23,17 @@ import { setFocused, setShowChat } from '../stores/ChatStore'
 import { NavKeys, Keyboard } from '../../../types/KeyboardState'
 import { createMeetingRoomWithArea } from '../utils/mRoom'
 
-import { setCurrentMeetingRoomId,
-    MeetingRoom,
-    MeetingRoomArea,
-    
-} from '../stores/MeetingRoomStore'
+import { setCurrentMeetingRoomId, MeetingRoom, MeetingRoomArea } from '../stores/MeetingRoomStore'
 
 export default class Game extends Phaser.Scene {
   network!: Network
   private meetAreaGraphics!: Phaser.GameObjects.Graphics
+  private meetAreaOverlay!: Phaser.GameObjects.Graphics
   private cursors!: NavKeys
   private keyE!: Phaser.Input.Keyboard.Key
   private keyR!: Phaser.Input.Keyboard.Key
   private map!: Phaser.Tilemaps.Tilemap
+  private rooms: MeetingRoom[] = []
   myPlayer!: MyPlayer
   private playerSelector!: Phaser.GameObjects.Zone
   private otherPlayers!: Phaser.Physics.Arcade.Group
@@ -170,9 +168,14 @@ export default class Game extends Phaser.Scene {
     )
     // **********************
     // Meeting room areas
+    this.meetAreaGraphics = this.add.graphics()
+    this.meetAreaOverlay = this.add.graphics()
     this.meetingRoomAreas = store.getState().meetingRoom.meetingRoomAreas
     store.subscribe(() => {
+      this.rooms = store.getState().meetingRoom.meetingRooms ?? []
+      console.log('Meeting rooms updated:', this.rooms)
       this.meetingRoomAreas = store.getState().meetingRoom.meetingRoomAreas
+      this.drawMeetingRoomAreas()
     })
     const { room, area } = createMeetingRoomWithArea(
       'Meeting Room',
@@ -183,11 +186,9 @@ export default class Game extends Phaser.Scene {
       448,
       296
     )
-    this.meetAreaGraphics = this.add.graphics()
-    this.meetAreaGraphics.setDepth(1000)
-    this.meetAreaGraphics.lineStyle(3, 0xff0000, 1)
-    this.meetAreaGraphics.strokeRect(area.x, area.y, area.width, area.height)
-
+    console.log('Created meeting room:', room)
+    // this.rooms.push(room)
+    this.drawMeetingRoomAreas()
     //**********************
     // register network event listeners
     this.network.onPlayerJoined(this.handlePlayerJoined, this)
@@ -316,9 +317,98 @@ export default class Game extends Phaser.Scene {
     )
     const nextId = area ? area.meetingRoomId : null
     if (nextId !== this.myPlayer.currentMeetingRoomId) {
-        console.log('Meeting room changed:', nextId)
-      this.myPlayer.currentMeetingRoomId = nextId
-      console.log(this.myPlayer.currentMeetingRoomId)
+      if (nextId) {
+        const room = this.rooms.find((r) => r.id === nextId)
+        // console.log('checkPlayerInMeetingRoom', nextId, room)
+        if (room) {
+          const myUserId = this.myPlayer.playerId
+          if (room.mode === 'private') {
+            if (
+              (room.hostUserId !== myUserId && !Array.isArray(room.invitedUsers)) ||
+              !room.invitedUsers.includes(myUserId)
+            ) {
+              console.log('You are not invited to this private room')
+            } else {
+              console.log('You are entering a private room')
+              this.myPlayer.currentMeetingRoomId = nextId
+            }
+          } else if (room.mode === 'secret') {
+            if (room.hostUserId !== myUserId) {
+              console.log('You are not allowed to enter this secret room')
+            }
+          } else {
+            console.log('You are entering an open room')
+            this.myPlayer.currentMeetingRoomId = nextId
+          }
+        }
+      } else {
+        console.log('You are leaving the meeting room')
+        this.myPlayer.currentMeetingRoomId = null
+      }
+    }
+  }
+  private canAccessMeetingRoom(room: MeetingRoom): boolean {
+    const myUserId = this.myPlayer.playerId
+
+    if (room.mode === 'private') {
+      return (
+        room.hostUserId === myUserId ||
+        (Array.isArray(room.invitedUsers) && room.invitedUsers.includes(myUserId))
+      )
+    } else if (room.mode === 'secret') {
+      return room.hostUserId === myUserId
+    } else {
+      return true // open room
+    }
+  }
+
+  private drawMeetingRoomAreas() {
+    this.meetingRoomAreas = store.getState().meetingRoom.meetingRoomAreas
+
+    this.meetAreaGraphics.clear()
+    this.meetAreaOverlay.clear()
+
+    this.meetAreaGraphics.setDepth(1000)
+    this.meetAreaOverlay.setDepth(1001)
+
+    for (const area of this.meetingRoomAreas) {
+      const room = this.rooms.find((r) => r.id === area.meetingRoomId)
+
+      if (room) {
+        const canAccess = this.canAccessMeetingRoom(room)
+
+        if (canAccess) {
+          this.meetAreaGraphics.lineStyle(3, 0x00ff00, 1)
+          this.meetAreaGraphics.strokeRect(area.x, area.y, area.width, area.height)
+        } else {
+          this.meetAreaGraphics.lineStyle(3, 0xff0000, 1)
+          this.meetAreaGraphics.strokeRect(area.x, area.y, area.width, area.height)
+
+          this.meetAreaOverlay.fillStyle(0x808080, 0.6)
+          this.meetAreaOverlay.fillRect(area.x, area.y, area.width, area.height)
+
+          const centerX = area.x + area.width / 2
+          const centerY = area.y + area.height / 2
+
+          const restrictedText = this.add.text(centerX, centerY, 'cannot access', {
+            fontSize: '16px',
+            color: '#ffffff',
+            backgroundColor: '#000000',
+            padding: { x: 8, y: 4 },
+          })
+          restrictedText.setOrigin(0.5)
+          restrictedText.setDepth(1002)
+
+          this.time.delayedCall(3000, () => {
+            if (restrictedText && restrictedText.active) {
+              restrictedText.destroy()
+            }
+          })
+        }
+      } else {
+        this.meetAreaGraphics.lineStyle(3, 0xff0000, 1)
+        this.meetAreaGraphics.strokeRect(area.x, area.y, area.width, area.height)
+      }
     }
   }
 
