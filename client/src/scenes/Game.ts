@@ -175,7 +175,6 @@ export default class Game extends Phaser.Scene {
     this.meetAreaOverlay = this.add.graphics()
     this.meetingRoomAreas = store.getState().meetingRoom.meetingRoomAreas
 
-
     store.subscribe(() => {
       this.rooms = store.getState().meetingRoom.meetingRooms ?? []
       console.log('Meeting rooms updated:', this.rooms)
@@ -195,7 +194,7 @@ export default class Game extends Phaser.Scene {
 
         // if the room mode changed, remove collider
         if ((prevRoom.mode === 'private' || prevRoom.mode === 'secret') && room.mode === 'open') {
-          this.onMeetingRoomPermissionChanged(room.id, true) // collider削除
+          this.onMeetingRoomPermissionChanged(room.id, true) // collider
         }
       }
       // update prevRooms to current rooms
@@ -413,7 +412,10 @@ export default class Game extends Phaser.Scene {
       if (!room) return
 
       if (!this.canAccessMeetingRoom(room)) {
-        const collider = this.physics.add.collider(this.myPlayer, zone)
+        const collider = this.physics.add.collider(
+          [this.myPlayer, this.myPlayer.playerContainer],
+          zone
+        )
         this.meetingRoomColliders.set(room.id, collider)
       }
     })
@@ -467,7 +469,7 @@ export default class Game extends Phaser.Scene {
       }
     }
   }
-  // onMeetingRoomPermissionChanged で「canAccess === true」時は必ず削除
+
   private onMeetingRoomPermissionChanged(roomId: string, canAccess: boolean) {
     const collider = this.meetingRoomColliders.get(roomId)
     console.log('onMeetingRoomPermissionChanged', roomId, canAccess, collider)
@@ -484,7 +486,7 @@ export default class Game extends Phaser.Scene {
     } else if (!canAccess && !collider) {
       const zone = this.meetingRoomZones.find((z) => z.name === roomId)
       if (zone) {
-        const newCollider = this.physics.add.collider(this.myPlayer, zone)
+        const newCollider = this.physics.add.collider([this.myPlayer, this.myPlayer.playerContainer], zone)
         this.meetingRoomColliders.set(roomId, newCollider)
       }
     }
