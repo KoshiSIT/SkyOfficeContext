@@ -24,6 +24,7 @@ import { NavKeys, Keyboard } from '../../../types/KeyboardState'
 import { createMeetingRoomWithArea } from '../utils/mRoom'
 
 import { setCurrentMeetingRoomId, MeetingRoom, MeetingRoomArea } from '../stores/MeetingRoomStore'
+import { argv0 } from 'process'
 
 export default class Game extends Phaser.Scene {
   network!: Network
@@ -41,6 +42,8 @@ export default class Game extends Phaser.Scene {
   computerMap = new Map<string, Computer>()
   private whiteboardMap = new Map<string, Whiteboard>()
   meetingRoomAreas: MeetingRoomArea[] = []
+  private meetingRoomZones: Phaser.GameObjects.Zone[] = []
+  private prevRooms: MeetingRoom[] = []
 
   constructor() {
     super('game')
@@ -171,12 +174,34 @@ export default class Game extends Phaser.Scene {
     this.meetAreaGraphics = this.add.graphics()
     this.meetAreaOverlay = this.add.graphics()
     this.meetingRoomAreas = store.getState().meetingRoom.meetingRoomAreas
+
+
     store.subscribe(() => {
       this.rooms = store.getState().meetingRoom.meetingRooms ?? []
       console.log('Meeting rooms updated:', this.rooms)
       this.meetingRoomAreas = store.getState().meetingRoom.meetingRoomAreas
       this.drawMeetingRoomAreas()
+      this.createMeetingRoomZones()
+      for (const room of this.rooms) {
+        const prevRoom = this.prevRooms.find((r) => r.id === room.id)
+        if (!prevRoom) continue // if the room is new, skip
+
+        // check if you can access the meeting room
+        const prevCanAccess = this.canAccessMeetingRoom(prevRoom)
+        const nowCanAccess = this.canAccessMeetingRoom(room)
+        if (prevCanAccess !== nowCanAccess) {
+          this.onMeetingRoomPermissionChanged(room.id, nowCanAccess)
+        }
+
+        // if the room mode changed, remove collider
+        if ((prevRoom.mode === 'private' || prevRoom.mode === 'secret') && room.mode === 'open') {
+          this.onMeetingRoomPermissionChanged(room.id, true) // collider削除
+        }
+      }
+      // update prevRooms to current rooms
+      this.prevRooms = this.rooms.map((r) => ({ ...r }))
     })
+
     const { room, area } = createMeetingRoomWithArea(
       'Meeting Room',
       'open',
@@ -186,9 +211,7 @@ export default class Game extends Phaser.Scene {
       448,
       296
     )
-    console.log('Created meeting room:', room)
-    // this.rooms.push(room)
-    this.drawMeetingRoomAreas()
+
     //**********************
     // register network event listeners
     this.network.onPlayerJoined(this.handlePlayerJoined, this)
@@ -347,6 +370,7 @@ export default class Game extends Phaser.Scene {
       }
     }
   }
+
   private canAccessMeetingRoom(room: MeetingRoom): boolean {
     const myUserId = this.myPlayer.playerId
 
@@ -362,6 +386,38 @@ export default class Game extends Phaser.Scene {
     }
   }
 
+  private meetingRoomColliders: Map<string, Phaser.Physics.Arcade.Collider> = new Map()
+
+  private createMeetingRoomZones() {
+    // delete existing colliders and zones
+    for (const collider of this.meetingRoomColliders.values()) {
+      collider.destroy()
+    }
+    this.meetingRoomColliders.clear()
+
+    for (const zone of this.meetingRoomZones) {
+      zone.destroy()
+    }
+    this.meetingRoomZones = []
+
+    // create new zones and colliders
+    this.meetingRoomAreas.forEach((area) => {
+      const centerX = area.x + area.width / 2
+      const centerY = area.y + area.height / 2
+      const zone = this.add.zone(centerX, centerY, area.width, area.height)
+      this.physics.add.existing(zone, true)
+      zone.setName(area.meetingRoomId)
+      this.meetingRoomZones.push(zone)
+
+      const room = this.rooms.find((r) => r.id === area.meetingRoomId)
+      if (!room) return
+
+      if (!this.canAccessMeetingRoom(room)) {
+        const collider = this.physics.add.collider(this.myPlayer, zone)
+        this.meetingRoomColliders.set(room.id, collider)
+      }
+    })
+  }
   private drawMeetingRoomAreas() {
     this.meetingRoomAreas = store.getState().meetingRoom.meetingRoomAreas
 
@@ -411,9 +467,33 @@ export default class Game extends Phaser.Scene {
       }
     }
   }
+  // onMeetingRoomPermissionChanged で「canAccess === true」時は必ず削除
+  private onMeetingRoomPermissionChanged(roomId: string, canAccess: boolean) {
+    const collider = this.meetingRoomColliders.get(roomId)
+    console.log('onMeetingRoomPermissionChanged', roomId, canAccess, collider)
+    if (canAccess && collider) {
+      console.log('before remove', collider.active)
+      collider.destroy()
+      console.log('after remove', collider.active)
+
+      console.log('=== MeetingRoomColliders List ===')
+      for (const [roomId, collider] of this.meetingRoomColliders.entries()) {
+        console.log(roomId, collider, 'active:', collider.active)
+      }
+      this.meetingRoomColliders.delete(roomId)
+    } else if (!canAccess && !collider) {
+      const zone = this.meetingRoomZones.find((z) => z.name === roomId)
+      if (zone) {
+        const newCollider = this.physics.add.collider(this.myPlayer, zone)
+        this.meetingRoomColliders.set(roomId, newCollider)
+      }
+    }
+  }
 
   update(t: number, dt: number) {
     if (this.myPlayer && this.network) {
+      this.myPlayer.prevX = this.myPlayer.x
+      this.myPlayer.prevY = this.myPlayer.y
       this.playerSelector.update(this.myPlayer, this.cursors)
       this.checkPlayerInMeetingRoom(this.myPlayer.x, this.myPlayer.y)
       this.myPlayer.update(this.playerSelector, this.cursors, this.keyE, this.keyR, this.network)

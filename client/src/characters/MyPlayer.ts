@@ -21,6 +21,8 @@ export default class MyPlayer extends Player {
   private chairOnSit?: Chair
   public joystickMovement?: JoystickMovement
   public currentMeetingRoomId?: string | null = null
+  public prevX: number = 0
+  public prevY: number = 0
   constructor(
     scene: Phaser.Scene,
     x: number,
