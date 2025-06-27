@@ -1,16 +1,12 @@
-mport React from 'react'
+import React from 'react'
 import styled from 'styled-components'
 
-<<<<<<< Updated upstream
-import { useAppSelector } from './hooks'
-=======
 import { useAppDispatch } from './hooks'
 import { useAppNavigation } from './hooks/useAppNavigation'
 import { useModalManager } from './hooks/useModalManager'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import { useGameContent } from './hooks/useGameContent'
 import { toggleDevMode } from './stores/DevModeStore'
->>>>>>> Stashed changes
 
 import RoomSelectionDialog from './components/RoomSelectionDialog'
 import LoginDialog from './components/LoginDialog'
@@ -21,55 +17,17 @@ import Chat from './components/Chat'
 import HelperButtonGroup from './components/HelperButtonGroup'
 import MobileVirtualJoystick from './components/MobileVirtualJoystick'
 import MeetingRoomManager from './components/MeetingRoomManager'
-<<<<<<< Updated upstream
-=======
 import MeetingRoomChat from './components/MeetingRoomChat'
 import WorkStatusPanel from './components/WorkStatusPanel'
 import PlayerStatusModal from './components/PlayerStatusModal'
 import DevModePanel from './components/DevModePanel'
->>>>>>> Stashed changes
 
 const Backdrop = styled.div`
   position: absolute;
-  height: 100%
+  height: 100%;
   width: 100%;
 `
 
-<<<<<<< Updated upstream
-function App() {
-    const loggedIn = useAppSelector((state) => state.user.loggedIn)
-    const computerDialogOpen = useAppSelector((state) => state.computer.computerDialogOpen)
-    const whiteboardDialogOpen = useAppSelector((state) => state.whiteboard.whiteboardDialogOpen)
-    const videoConnected = useAppSelector((state) => state.user.videoConnected)
-    const roomJoined = useAppSelector((state) => state.room.roomJoined)
-
-    let ui: JSX.Element
-    if (loggedIn) {
-        if (computerDialogOpen) {
-            /* Render ComputerDialog if user is using a computer. */
-            ui = <ComputerDialog />
-        } else if (whiteboardDialogOpen) {
-            /* Render WhiteboardDialog if user is using a whiteboard. */
-            ui = <WhiteboardDialog />
-        } else {
-            ui = (
-                /* Render Chat or VideoConnectionDialog if no dialogs are opened. */
-                <>
-                    <Chat />
-                    {/* Render VideoConnectionDialog if user is not connected to a webcam. */}
-                    {!videoConnected && <VideoConnectionDialog />}
-                    <MobileVirtualJoystick />
-                    <MeetingRoomManager />
-                </>
-            )
-        }
-    } else if (roomJoined) {
-        /* Render LoginDialog if not logged in but selected a room. */
-        ui = <LoginDialog />
-    } else {
-        /* Render RoomSelectionDialog if yet selected a room. */
-        ui = <RoomSelectionDialog />
-=======
 /**
  * リファクタリング後のApp.tsx
  * 関心分離により各機能がカスタムフックに分離されている
@@ -104,7 +62,6 @@ function App() {
             default:
                 return <MainGameContent />
         }
->>>>>>> Stashed changes
     }
 
     return (
@@ -140,6 +97,7 @@ const MainGameContent = () => {
             <MobileVirtualJoystick />
             <WorkStatusPanel compact />
             
+            {isDevMode && <MeetingRoomManager />}
             
             {currentMeetingRoomId && currentRoom && (
                 <MeetingRoomChat 
