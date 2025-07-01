@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react'
+import phaserGame from '../PhaserGame'
+import Game from '../scenes/Game'
 import {
   Box,
   Paper,
@@ -18,22 +20,26 @@ import {
   Grid,
   Switch,
   FormControlLabel,
-  Divider
+  Divider,
+  IconButton,
+  Autocomplete
 } from '@mui/material'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import DeleteIcon from '@mui/icons-material/Delete'
+import AddIcon from '@mui/icons-material/Add'
 import { useAppSelector, useAppDispatch } from '../hooks'
 import { useDevMode } from '../hooks/useDevMode'
 import { LogLevel, LogEntry } from '../utils/logger'
 import { BackgroundMode } from '../../../types/BackgroundMode'
 import { BaseAvatarType } from '../types/AvatarTypes'
 import { startWork, endWork, startBreak, endBreak, setWorkStartTime, setFatigueLevel, updateWorkStatus, updateOtherPlayerWorkStatus, setBaseAvatar } from '../stores/WorkStore'
-import { toggleBackgroundMode, setVideoConnected, setLoggedIn, setShowJoystick } from '../stores/UserStore'
+import { toggleBackgroundMode, setVideoConnected, setLoggedIn, setShowJoystick, setPlayerNameMap } from '../stores/UserStore'
 import { setDevmode } from '../stores/DevModeStore'
 import { setLobbyJoined, setRoomJoined, setJoinedRoomData } from '../stores/RoomStore'
 import { setShowChat, setFocused, pushChatMessage, setCurrentMeetingRoomId } from '../stores/ChatStore'
 import { openComputerDialog, closeComputerDialog } from '../stores/ComputerStore'
 import { openWhiteboardDialog, closeWhiteboardDialog } from '../stores/WhiteboardStore'
-import { addMeetingRoom, updateMeetingRoom, removeMeetingRoom, setCurrentMeetingRoomId as setMeetingRoomId, MeetingRoomMode } from '../stores/MeetingRoomStore'
+import { addMeetingRoom, updateMeetingRoom, removeMeetingRoom, addMeetingRoomArea, updateMeetingRoomArea, removeMeetingRoomArea, setCurrentMeetingRoomId as setMeetingRoomId, MeetingRoomMode } from '../stores/MeetingRoomStore'
 
 interface TabPanelProps {
   children?: React.ReactNode
@@ -52,6 +58,31 @@ const DevModePanel: React.FC = () => {
   const { isDevMode, logManager, setLogLevel } = useDevMode()
   const dispatch = useAppDispatch()
   
+  // Helper function to get network connection
+  const getNetwork = () => {
+    try {
+      console.log('🔍 [DevMode] Getting network connection...')
+      console.log('🔍 [DevMode] phaserGame:', phaserGame)
+      console.log('🔍 [DevMode] phaserGame.scene:', phaserGame?.scene)
+      console.log('🔍 [DevMode] phaserGame.scene.keys:', phaserGame?.scene?.keys)
+      
+      const game = phaserGame.scene.keys.game as Game
+      console.log('🔍 [DevMode] game object:', game)
+      console.log('🔍 [DevMode] game.network:', game?.network)
+      
+      if (game?.network) {
+        console.log('✅ [DevMode] Network connection found')
+        return game.network
+      } else {
+        console.warn('❌ [DevMode] Network connection not found')
+        return null
+      }
+    } catch (error) {
+      console.error('🌐 [DevMode] Failed to get network connection:', error)
+      return null
+    }
+  }
+  
   // Get Redux state - ALWAYS call these hooks
   const workState = useAppSelector((state) => state.work)
   const userState = useAppSelector((state) => state.user)
@@ -60,6 +91,28 @@ const DevModePanel: React.FC = () => {
   const computerState = useAppSelector((state) => state.computer)
   const whiteboardState = useAppSelector((state) => state.whiteboard)
   const meetingRoomState = useAppSelector((state) => state.meetingRoom)
+  
+  // Get online players from playerNameMap
+  const onlinePlayers = React.useMemo(() => {
+    const players: { id: string, name: string }[] = []
+    console.log('🎮 [DevMode] playerNameMap:', userState.playerNameMap)
+    console.log('🎮 [DevMode] playerNameMap size:', userState.playerNameMap.size)
+    console.log('🎮 [DevMode] sessionId:', userState.sessionId)
+    
+    // Iterate over Map entries
+    for (const [id, name] of userState.playerNameMap.entries()) {
+      console.log('🎮 [DevMode] Processing player:', { id, name, isMe: id === userState.sessionId })
+      if (id !== userState.sessionId) { // Exclude self
+        players.push({ id, name })
+        console.log('🎮 [DevMode] Added to onlinePlayers:', { id, name })
+      } else {
+        console.log('🎮 [DevMode] Skipped self:', { id, name })
+      }
+    }
+    
+    console.log('🎮 [DevMode] Final onlinePlayers:', players)
+    return players.sort((a, b) => a.name.localeCompare(b.name))
+  }, [userState.playerNameMap, userState.sessionId])
   
   // Panel state - ALWAYS call these hooks
   const [tabValue, setTabValue] = useState(0)
@@ -83,7 +136,7 @@ const DevModePanel: React.FC = () => {
   const [editingRooms, setEditingRooms] = useState<{ [roomId: string]: { 
     name: string
     area: { x: number, y: number, width: number, height: number }
-    invitedUsers: string
+    invitedUsers: string[]
   } }>({})
   
   // Visual editing mode - ALWAYS call this hook
@@ -102,29 +155,41 @@ const DevModePanel: React.FC = () => {
   // Expose visual edit functions globally for game scene access
   useEffect(() => {
     const updateRoomAreaFromVisual = (roomId: string, area: { x: number, y: number, width: number, height: number }) => {
+      console.log(`🎨 [DevMode] updateRoomAreaFromVisual called:`, { roomId, area })
+      
       // Update Redux store
-      const room = meetingRoomState.meetingRooms.find(r => r.id === roomId)
-      if (!room) return
+      const room = meetingRoomState.meetingRooms[roomId]
+      if (!room) {
+        console.error(`🎨 [DevMode] Room not found:`, roomId)
+        return
+      }
+
+      const currentArea = meetingRoomState.meetingRoomAreas[roomId]
+      console.log(`🎨 [DevMode] Current area:`, currentArea)
 
       const updatedArea = {
         meetingRoomId: roomId,
         ...area
       }
 
-      dispatch(updateMeetingRoom({ room, area: updatedArea }))
+      console.log(`🎨 [DevMode] Dispatching updateMeetingRoomArea with:`, updatedArea)
+      dispatch(updateMeetingRoomArea(updatedArea))
 
       // Send to network
-      const network = (window as any).network
+      const network = getNetwork()
       if (network) {
-        network.updateMeetingRoomArea({ roomId, area: updatedArea })
+        console.log(`🎨 [DevMode] Sending to network:`, { roomId, areaUpdates: area })
+        network.updateMeetingRoomArea(roomId, area)
+      } else {
+        console.warn(`🎨 [DevMode] Network not available`)
       }
       
-      console.log(`🎨 [DevMode] Updated room area visually:`, { roomId, area })
+      console.log(`🎨 [DevMode] Updated room area visually completed:`, { roomId, area })
     }
 
-    (window as any).devModeUpdateRoomArea = updateRoomAreaFromVisual
+    // Global function no longer needed - Game.ts uses direct Redux/Network access
     return () => {
-      delete (window as any).devModeUpdateRoomArea
+      // Cleanup if needed
     }
   }, [meetingRoomState, dispatch])
 
@@ -177,6 +242,12 @@ const DevModePanel: React.FC = () => {
     const statuses = ['working', 'break', 'meeting', 'off-duty'] as const
     const randomStatus = statuses[Math.floor(Math.random() * statuses.length)]
     
+    console.log('🤖 [DevMode] Adding mock player to playerNameMap:', { id: mockPlayerId, name: mockPlayerName })
+    
+    // Add to playerNameMap for invitation testing
+    dispatch(setPlayerNameMap({ id: mockPlayerId, name: mockPlayerName }))
+    
+    // Add to work status for testing
     dispatch(updateOtherPlayerWorkStatus({
       playerId: mockPlayerId,
       playerName: mockPlayerName,
@@ -188,7 +259,7 @@ const DevModePanel: React.FC = () => {
   const testNetworkSync = () => {
     console.log('🔄 [DevMode] Testing network sync...')
     console.log('Current other players:', workState.otherPlayersWorkStatus)
-    console.log('Network connection:', (window as any).network ? 'Connected' : 'Disconnected')
+    console.log('Network connection:', getNetwork() ? 'Connected' : 'Disconnected')
     console.log('User state:', {
       sessionId: userState.sessionId,
       loggedIn: userState.loggedIn,
@@ -205,7 +276,7 @@ const DevModePanel: React.FC = () => {
     
     // Test work status message reception from network
     console.log('📡 [DevMode] Checking for work-status message listeners...')
-    const network = (window as any).network
+    const network = getNetwork()
     if (network && network.room) {
       console.log('✅ Network room is available')
       console.log('🎧 Message listeners count:', Object.keys(network.room._messageHandlers || {}).length)
@@ -252,7 +323,7 @@ const DevModePanel: React.FC = () => {
 
   // Change own work status and test network transmission
   const testSendWorkStatus = () => {
-    const network = (window as any).network
+    const network = getNetwork()
     if (!network) {
       console.error('❌ Network not available')
       return
@@ -431,10 +502,11 @@ const DevModePanel: React.FC = () => {
       ...newRoomArea
     }
     
-    dispatch(addMeetingRoom({ room, area }))
+    dispatch(addMeetingRoom(room))
+    dispatch(addMeetingRoomArea(area))
     
     // Send to network if available
-    const network = (window as any).network
+    const network = getNetwork()
     if (network) {
       network.createMeetingRoom({
         id: roomId,
@@ -453,28 +525,71 @@ const DevModePanel: React.FC = () => {
   }
 
   const deleteMeetingRoom = (roomId: string) => {
+    console.log('🗑️ [DevMode] ===== DELETE MEETING ROOM START =====')
+    console.log('🗑️ [DevMode] Room ID to delete:', roomId)
+    
+    // Check if room exists before deletion
+    const roomExists = meetingRoomState.meetingRooms[roomId]
+    const areaExists = meetingRoomState.meetingRoomAreas[roomId]
+    console.log('🗑️ [DevMode] Room exists in state:', !!roomExists)
+    console.log('🗑️ [DevMode] Area exists in state:', !!areaExists)
+    
+    // Remove from local Redux state
+    console.log('🗑️ [DevMode] Step 1: Removing from Redux state...')
     dispatch(removeMeetingRoom(roomId))
+    dispatch(removeMeetingRoomArea(roomId))
+    console.log('🗑️ [DevMode] Redux state update dispatched')
     
     // Send to network if available
-    const network = (window as any).network
+    console.log('🗑️ [DevMode] Step 2: Getting network connection...')
+    const network = getNetwork()
     if (network) {
-      network.deleteMeetingRoom(roomId)
+      console.log('🗑️ [DevMode] Step 3: Sending delete request to server...')
+      console.log('🗑️ [DevMode] Network object methods:', Object.getOwnPropertyNames(network))
+      console.log('🗑️ [DevMode] Has deleteMeetingRoom method:', typeof network.deleteMeetingRoom)
+      
+      try {
+        network.deleteMeetingRoom(roomId)
+        console.log('🗑️ [DevMode] Delete request sent successfully')
+      } catch (error) {
+        console.error('🗑️ [DevMode] Error sending delete request:', error)
+      }
+    } else {
+      console.warn('🗑️ [DevMode] Network not available for room deletion')
     }
+    
+    console.log('🗑️ [DevMode] ===== DELETE MEETING ROOM END =====')
   }
 
   const updateRoomMode = (roomId: string, newMode: MeetingRoomMode) => {
-    const room = meetingRoomState.meetingRooms.find(r => r.id === roomId)
-    if (!room) return
+    console.log('🏢 [DevMode] updateRoomMode called:', { roomId, newMode })
     
+    const room = meetingRoomState.meetingRooms[roomId]
+    if (!room) {
+      console.error('🏢 [DevMode] Room not found:', roomId)
+      return
+    }
+    
+    console.log('🏢 [DevMode] Current room:', room)
     const updatedRoom = { ...room, mode: newMode }
-    const area = meetingRoomState.meetingRoomAreas.find(a => a.meetingRoomId === roomId)
+    console.log('🏢 [DevMode] Updated room:', updatedRoom)
+    
+    const area = meetingRoomState.meetingRoomAreas[roomId]
     
     if (area) {
-      dispatch(updateMeetingRoom({ room: updatedRoom, area }))
+      console.log('🏢 [DevMode] Dispatching updateMeetingRoom to Redux')
+      dispatch(updateMeetingRoom(updatedRoom))
       
       // Send to network if available
-      const network = (window as any).network
+      const network = getNetwork()
       if (network) {
+        console.log('🏢 [DevMode] Sending to network:', {
+          id: roomId,
+          name: room.name,
+          mode: newMode,
+          hostUserId: room.hostUserId,
+          invitedUsers: room.invitedUsers
+        })
         network.updateMeetingRoom({
           id: roomId,
           name: room.name,
@@ -482,7 +597,11 @@ const DevModePanel: React.FC = () => {
           hostUserId: room.hostUserId,
           invitedUsers: room.invitedUsers
         })
+      } else {
+        console.warn('🏢 [DevMode] Network not available on window object')
       }
+    } else {
+      console.error('🏢 [DevMode] Area not found for room:', roomId)
     }
   }
 
@@ -498,7 +617,7 @@ const DevModePanel: React.FC = () => {
           width: area?.width || 100,
           height: area?.height || 100
         },
-        invitedUsers: room.invitedUsers.join(', ')
+        invitedUsers: room.invitedUsers || []
       }
     }))
   }
@@ -507,13 +626,13 @@ const DevModePanel: React.FC = () => {
     const editing = editingRooms[roomId]
     if (!editing) return
 
-    const room = meetingRoomState.meetingRooms.find(r => r.id === roomId)
+    const room = meetingRoomState.meetingRooms[roomId]
     if (!room) return
 
     const updatedRoom = {
       ...room,
       name: editing.name,
-      invitedUsers: editing.invitedUsers.split(',').map(u => u.trim()).filter(u => u)
+      invitedUsers: editing.invitedUsers
     }
 
     const updatedArea = {
@@ -521,10 +640,11 @@ const DevModePanel: React.FC = () => {
       ...editing.area
     }
 
-    dispatch(updateMeetingRoom({ room: updatedRoom, area: updatedArea }))
+    dispatch(updateMeetingRoom(updatedRoom))
+    dispatch(updateMeetingRoomArea(updatedArea))
 
     // Send to network
-    const network = (window as any).network
+    const network = getNetwork()
     if (network) {
       network.updateMeetingRoom({
         id: roomId,
@@ -573,10 +693,31 @@ const DevModePanel: React.FC = () => {
     }))
   }
 
+  const addInvitedUser = (roomId: string, userId: string) => {
+    setEditingRooms(prev => ({
+      ...prev,
+      [roomId]: {
+        ...prev[roomId],
+        invitedUsers: [...prev[roomId].invitedUsers, userId]
+      }
+    }))
+  }
+
+  const removeInvitedUser = (roomId: string, userId: string) => {
+    setEditingRooms(prev => ({
+      ...prev,
+      [roomId]: {
+        ...prev[roomId],
+        invitedUsers: prev[roomId].invitedUsers.filter(id => id !== userId)
+      }
+    }))
+  }
+
   // Visual editing mode functions
   const toggleVisualEditMode = () => {
     console.log('🎯 [DevMode] toggleVisualEditMode called, current state:', visualEditMode)
-    setVisualEditMode(!visualEditMode)
+    const newEditMode = !visualEditMode
+    setVisualEditMode(newEditMode)
     
     // Send visual edit mode to game scene
     const game = (window as any).game
@@ -614,14 +755,14 @@ const DevModePanel: React.FC = () => {
     console.log('🎯 [DevMode] Game scene keys:', Object.keys(gameScene || {}))
     
     if (gameScene && (gameScene as any).toggleMeetingRoomEditMode) {
-      console.log('🎯 [DevMode] Calling toggleMeetingRoomEditMode with:', !visualEditMode)
-      ;(gameScene as any).toggleMeetingRoomEditMode(!visualEditMode)
+      console.log('🎯 [DevMode] Calling toggleMeetingRoomEditMode with:', newEditMode)
+      ;(gameScene as any).toggleMeetingRoomEditMode(newEditMode)
     } else {
       console.warn('🎯 [DevMode] toggleMeetingRoomEditMode not found on game scene')
       console.warn('🎯 [DevMode] Available methods on scene:', Object.keys(gameScene || {}))
     }
     
-    console.log(`🎨 [DevMode] Visual edit mode: ${!visualEditMode ? 'ENABLED' : 'DISABLED'}`)
+    console.log(`🎨 [DevMode] Visual edit mode: ${newEditMode ? 'ENABLED' : 'DISABLED'}`)
   }
 
 
@@ -971,6 +1112,62 @@ const DevModePanel: React.FC = () => {
                 </Box>
               )}
 
+              {/* Network Debug Section */}
+              <Box sx={{ mb: 2, p: 1, border: '1px solid #2196f3', borderRadius: 1, backgroundColor: '#e3f2fd' }}>
+                <Typography sx={{ fontSize: '11px', fontWeight: 'bold', mb: 1, color: '#1976d2' }}>
+                  🔧 Network Debug Tests
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={() => {
+                      const network = getNetwork()
+                      console.log('🔧 [Debug] Network test result:', {
+                        networkExists: !!network,
+                        networkType: typeof network,
+                        hasDeletMethod: network ? typeof network.deleteMeetingRoom : 'N/A',
+                        networkMethods: network ? Object.getOwnPropertyNames(network) : []
+                      })
+                    }}
+                    sx={{ fontSize: '8px' }}
+                  >
+                    Test Network
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={() => {
+                      console.log('🔧 [Debug] Redux state:', {
+                        roomsCount: Object.keys(meetingRoomState.meetingRooms).length,
+                        areasCount: Object.keys(meetingRoomState.meetingRoomAreas).length,
+                        rooms: Object.values(meetingRoomState.meetingRooms).map(r => ({ id: r.id, name: r.name }))
+                      })
+                    }}
+                    sx={{ fontSize: '8px' }}
+                  >
+                    Test Redux
+                  </Button>
+                  {Object.keys(meetingRoomState.meetingRooms).length > 1 && (
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      color="error"
+                      onClick={() => {
+                        const testRoom = Object.values(meetingRoomState.meetingRooms).find(r => r.id !== 'default-meeting-room')
+                        if (testRoom) {
+                          console.log('🔧 [Debug] Testing deletion of room:', testRoom.id)
+                          deleteMeetingRoom(testRoom.id)
+                        }
+                      }}
+                      sx={{ fontSize: '8px' }}
+                    >
+                      Test Delete
+                    </Button>
+                  )}
+                </Box>
+              </Box>
+
               {/* Create New Meeting Room */}
               <Typography sx={{ fontSize: '14px', fontWeight: 'bold', mb: 1 }}>Create New Room</Typography>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 2, p: 1, border: '1px solid #ddd', borderRadius: 1 }}>
@@ -1053,15 +1250,15 @@ const DevModePanel: React.FC = () => {
 
               {/* Existing Meeting Rooms */}
               <Typography sx={{ fontSize: '14px', fontWeight: 'bold', mb: 1 }}>
-                Existing Rooms ({meetingRoomState.meetingRooms.length})
+                Existing Rooms ({Object.keys(meetingRoomState.meetingRooms).length})
               </Typography>
-              {meetingRoomState.meetingRooms.length === 0 ? (
+              {Object.keys(meetingRoomState.meetingRooms).length === 0 ? (
                 <Typography sx={{ fontSize: '12px', color: 'grey.600', fontStyle: 'italic' }}>
                   No meeting rooms created yet
                 </Typography>
               ) : (
-                meetingRoomState.meetingRooms.map((room) => {
-                  const area = meetingRoomState.meetingRoomAreas.find(a => a.meetingRoomId === room.id)
+                Object.values(meetingRoomState.meetingRooms).map((room) => {
+                  const area = meetingRoomState.meetingRoomAreas[room.id]
                   const isExpanded = expandedRoom === room.id
                   const isEditing = editingRooms[room.id]
 
@@ -1116,16 +1313,66 @@ const DevModePanel: React.FC = () => {
                               </Box>
 
                               {/* Invited Users */}
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <Typography sx={{ fontSize: '10px', minWidth: '60px' }}>Invites:</Typography>
-                                <TextField
+                              <Box sx={{ mb: 2 }}>
+                                <Typography sx={{ fontSize: '11px', fontWeight: 'bold', mb: 1 }}>
+                                  Invited Users ({isEditing.invitedUsers.length})
+                                </Typography>
+                                
+                                {/* Current invited users */}
+                                <Box sx={{ mb: 1, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                  {isEditing.invitedUsers.map((userId) => {
+                                    const player = onlinePlayers.find(p => p.id === userId)
+                                    const displayName = player ? player.name : userId
+                                    return (
+                                      <Chip
+                                        key={userId}
+                                        label={displayName}
+                                        size="small"
+                                        onDelete={() => removeInvitedUser(room.id, userId)}
+                                        sx={{ fontSize: '9px', height: '20px' }}
+                                      />
+                                    )
+                                  })}
+                                  {isEditing.invitedUsers.length === 0 && (
+                                    <Typography sx={{ fontSize: '9px', color: 'grey.500', fontStyle: 'italic' }}>
+                                      No users invited
+                                    </Typography>
+                                  )}
+                                </Box>
+
+                                {/* Add new user dropdown */}
+                                <Autocomplete
                                   size="small"
-                                  value={isEditing.invitedUsers}
-                                  onChange={(e) => updateRoomEdit(room.id, 'invitedUsers', e.target.value)}
-                                  placeholder="user1, user2, user3"
-                                  sx={{ fontSize: '10px', flex: 1 }}
-                                  helperText="Comma-separated user IDs"
+                                  options={onlinePlayers.filter(p => !isEditing.invitedUsers.includes(p.id))}
+                                  getOptionLabel={(option) => `${option.name} (${option.id})`}
+                                  onChange={(event, newValue) => {
+                                    if (newValue) {
+                                      addInvitedUser(room.id, newValue.id)
+                                    }
+                                  }}
+                                  renderInput={(params) => (
+                                    <TextField
+                                      {...params}
+                                      placeholder="Add user from lobby..."
+                                      sx={{ fontSize: '10px' }}
+                                    />
+                                  )}
+                                  value={null}
+                                  sx={{ fontSize: '10px' }}
                                 />
+                                
+                                <Typography sx={{ fontSize: '9px', color: 'grey.600', mt: 0.5 }}>
+                                  {onlinePlayers.length} users online in lobby
+                                  {onlinePlayers.length === 0 && (
+                                    <span style={{ color: 'red' }}> (No online players found in playerNameMap)</span>
+                                  )}
+                                </Typography>
+                                
+                                {/* Debug info */}
+                                <Typography sx={{ fontSize: '8px', color: 'blue', mt: 0.5 }}>
+                                  Debug: playerNameMap size: {userState.playerNameMap.size}, 
+                                  sessionId: {userState.sessionId || 'null'}
+                                </Typography>
                               </Box>
 
                               {/* Area Settings */}
@@ -1236,7 +1483,12 @@ const DevModePanel: React.FC = () => {
                                 <strong>Participants:</strong> {room.participants.length > 0 ? room.participants.join(', ') : 'None'}
                               </Typography>
                               <Typography sx={{ fontSize: '10px', color: 'grey.600', mb: 0.5 }}>
-                                <strong>Invited:</strong> {room.invitedUsers.length > 0 ? room.invitedUsers.join(', ') : 'None'}
+                                <strong>Invited:</strong> {room.invitedUsers.length > 0 ? 
+                                  room.invitedUsers.map((userId: string) => {
+                                    const player = onlinePlayers.find(p => p.id === userId)
+                                    return player ? player.name : userId
+                                  }).join(', ') 
+                                  : 'None'}
                               </Typography>
                               {area && (
                                 <Typography sx={{ fontSize: '10px', color: 'grey.600' }}>
@@ -1407,7 +1659,8 @@ const DevModePanel: React.FC = () => {
                     width: 100,
                     height: 100
                   }
-                  dispatch(addMeetingRoom({ room: testRoom, area: testArea }))
+                  dispatch(addMeetingRoom(testRoom))
+                  dispatch(addMeetingRoomArea(testArea))
                 }}
                 fullWidth
               >
@@ -1517,6 +1770,19 @@ const DevModePanel: React.FC = () => {
             sx={{ mb: 1 }}
           >
             Add Random Player
+          </Button>
+          <Button 
+            variant="contained" 
+            size="small" 
+            onClick={() => {
+              for (let i = 0; i < 5; i++) {
+                setTimeout(() => addMockPlayer(), i * 100)
+              }
+            }}
+            fullWidth
+            sx={{ mb: 1, backgroundColor: '#2196f3' }}
+          >
+            Add 5 Test Players
           </Button>
           <Button 
             variant="outlined" 

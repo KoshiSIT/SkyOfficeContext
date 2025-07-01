@@ -379,5 +379,18 @@ docs/
 - **機能**: リアルタイムチャット、権限管理、履歴、UI統合
 - **ドキュメント**: 完全仕様書作成済み (`docs/features/meeting-room-chat.md`)
 
+## 🐛 最新の修正履歴
+
+### **ビデオ通話機能修正 (2025-07-01)**
+- **問題**: プレイヤー間ビデオ通話が開始されない (`otherVideoConnected: false` 状態継続)
+- **原因**: 参考実装との微細な差異によるイベント処理システムの不整合
+  - `Network.ts` のイベント登録メソッド欠落
+  - `player.onChange` の処理順序の違い
+  - `readyToConnect`/`videoConnected` イベント発火不備
+- **解決方法**: 参考実装からの完全ファイル置き換え
+- **修正ファイル**: `Network.ts`, `OtherPlayer.ts`, `WebRTC.ts`, `Game.ts`, `SkyOffice.ts`
+- **結果**: ✅ プレイヤー間ビデオ通話が正常動作
+- **詳細**: [修正レポート](./docs/fixes/2025-07-01_video-call-fix.md)
+
 ---
-**最終更新**: 2025-07-01 - ドキュメント体系導入・会議室チャット完全実装・CSS positioning問題解決
+**最終更新**: 2025-07-01 - ビデオ通話機能修正完了

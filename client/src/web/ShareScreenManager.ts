@@ -85,7 +85,7 @@ export default class ShareScreenManager {
       store.dispatch(setMyStream(null))
       // Manually let all other existing users know screen sharing is stopped
       const game = phaserGame.scene.keys.game as Game
-      game.network.stopScreenShare(store.getState().computer.computerId!)
+      game.network.onStopScreenShare(store.getState().computer.computerId!)
     }
   }
 

@@ -163,15 +163,4 @@ export default class WebRTC {
     this.buttonGrid?.append(audioButton)
     this.buttonGrid?.append(videoButton)
   }
-
-  // Methods for Network compatibility
-  connectToPlayer(userId: string, stream: MediaStream) {
-    this.myStream = stream
-    this.connectToNewUser(userId)
-  }
-
-  disconnectFromPlayer(userId: string) {
-    this.deleteVideoStream(userId)
-    this.deleteOnCalledVideoStream(userId)
-  }
 }

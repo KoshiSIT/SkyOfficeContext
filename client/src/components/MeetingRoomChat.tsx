@@ -51,7 +51,7 @@ const MeetingRoomChat: React.FC<MeetingRoomChatProps> = ({
             const game = phaserGame.scene.keys.game as Game
             if (game?.network) {
                 console.log('📜 [MeetingRoomChat] Requesting chat history for room:', meetingRoomId)
-                game.network.getMeetingRoomChatHistory(meetingRoomId)
+                // game.network.getMeetingRoomChatHistory(meetingRoomId)
             }
         } else {
             console.log('🚪 [MeetingRoomChat] No room ID, hiding chat')
@@ -105,7 +105,7 @@ const MeetingRoomChat: React.FC<MeetingRoomChatProps> = ({
             }))
 
             // サーバーに送信
-            game.network.sendMeetingRoomChatMessage(meetingRoomId, messageContent)
+            // game.network.sendMeetingRoomChatMessage(meetingRoomId, messageContent)
             setMessage('')
         }
     }

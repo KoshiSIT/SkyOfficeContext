@@ -147,16 +147,16 @@ const MeetingRoomManager: React.FC = () => {
   const rooms = useSelector((state: RootState) => state.meetingRoom.meetingRooms);
   const areas = useSelector((state: RootState) => state.meetingRoom.meetingRoomAreas);
 
-  if (rooms.length === 0) return <div>会議室がありません</div>;
+  if (Object.keys(rooms).length === 0) return <div>会議室がありません</div>;
 
   return (
     <div>
       <h1>MeetingRoomEditor</h1>
-      {rooms.map(room => (
+      {Object.values(rooms).map(room => (
         <MeetingRoomEditor
           key={room.id}
           room={room}
-          area={areas.find(a => a.meetingRoomId === room.id)}
+          area={areas[room.id]}
         />
       ))}
     </div>

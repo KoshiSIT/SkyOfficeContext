@@ -21,6 +21,7 @@ import { ItemType } from '../../../types/Items'
 
 import store from '../stores'
 import { setFocused, setShowChat } from '../stores/ChatStore'
+import { updateMeetingRoomArea } from '../stores/MeetingRoomStore'
 import { NavKeys, Keyboard } from '../../../types/KeyboardState'
 import { MeetingRoomManager } from './MeetingRoom'
 import { createMeetingRoomWithArea } from '../utils/mRoom'
@@ -97,6 +98,7 @@ export default class Game extends Phaser.Scene {
       throw new Error('server instance missing')
     } else {
       this.network = data.network
+      console.log('🚀 [Game] Initialized with network connection')
     }
 
     createCharacterAnims(this.anims)
@@ -104,6 +106,7 @@ export default class Game extends Phaser.Scene {
     // Make game instance globally available for DevMode
     if (typeof window !== 'undefined') {
       (window as any).game = this
+      console.log('🌐 [Game] Global game instance available for debugging')
     }
     
     // Set up Redux store subscription for avatar updates
@@ -218,14 +221,16 @@ export default class Game extends Phaser.Scene {
 
     //**********************
     // register network event listeners
-    phaserEvents.on(Event.PLAYER_JOINED, this.handlePlayerJoined, this)
-    phaserEvents.on(Event.PLAYER_LEFT, this.handlePlayerLeft, this)
-    phaserEvents.on(Event.MY_PLAYER_READY, this.handleMyPlayerReady, this)
-    phaserEvents.on(Event.MY_PLAYER_VIDEO_CONNECTED, this.handleMyVideoConnected, this)
-    phaserEvents.on(Event.PLAYER_UPDATED, this.handlePlayerUpdated, this)
-    phaserEvents.on(Event.ITEM_USER_ADDED, this.handleItemUserAdded, this)
-    phaserEvents.on(Event.ITEM_USER_REMOVED, this.handleItemUserRemoved, this)
-    phaserEvents.on('chat-message-added', this.handleChatMessageAdded, this)
+    console.log('📡 [Game] Registering network event listeners...')
+    this.network.onPlayerJoined(this.handlePlayerJoined, this)
+    this.network.onPlayerLeft(this.handlePlayerLeft, this)
+    this.network.onMyPlayerReady(this.handleMyPlayerReady, this)
+    this.network.onMyPlayerVideoConnected(this.handleMyVideoConnected, this)
+    this.network.onPlayerUpdated(this.handlePlayerUpdated, this)
+    this.network.onItemUserAdded(this.handleItemUserAdded, this)
+    this.network.onItemUserRemoved(this.handleItemUserRemoved, this)
+    this.network.onChatMessageAdded(this.handleChatMessageAdded, this)
+    console.log('✅ [Game] Network event listeners registered successfully')
     
     // CRITICAL: Ensure input is properly enabled
     console.log('🔧 [Game] Enabling input systems explicitly...')
@@ -302,9 +307,11 @@ export default class Game extends Phaser.Scene {
 
   // function to add new player to the otherPlayer group
   private handlePlayerJoined(newPlayer: IPlayer, id: string) {
+    console.log(`🎮 [Game] Creating other player: ${id}, name: ${newPlayer.name}, position: (${newPlayer.x}, ${newPlayer.y})`)
     const otherPlayer = this.add.otherPlayer(newPlayer.x, newPlayer.y, 'adam', id, newPlayer.name)
     this.otherPlayers.add(otherPlayer)
     this.otherPlayerMap.set(id, otherPlayer)
+    console.log(`✅ [Game] Other player added successfully: ${id}, total other players: ${this.otherPlayerMap.size}`)
   }
 
   // function to remove the player who left from the otherPlayer group
@@ -312,6 +319,7 @@ export default class Game extends Phaser.Scene {
     if (this.otherPlayerMap.has(id)) {
       const otherPlayer = this.otherPlayerMap.get(id)
       if (!otherPlayer) return
+      console.log(`👋 [Game] Removing player: ${id}, remaining players: ${this.otherPlayerMap.size - 1}`)
       this.otherPlayers.remove(otherPlayer, true, true)
       this.otherPlayerMap.delete(id)
     }
@@ -325,7 +333,6 @@ export default class Game extends Phaser.Scene {
     this.myPlayer.videoConnected = true
   }
 
-  // function to update target position upon receiving player updates
   private handlePlayerUpdated(field: string, value: number | string, id: string) {
     const otherPlayer = this.otherPlayerMap.get(id)
     otherPlayer?.updateOtherPlayer(field, value)
@@ -442,7 +449,7 @@ export default class Game extends Phaser.Scene {
       
       // Update Redux
       const meetingRoomState = store.getState().meetingRoom
-      const area = meetingRoomState.meetingRoomAreas.find(a => a.meetingRoomId === this.globalDragState.roomId)
+      const area = Object.values(meetingRoomState.meetingRoomAreas).find(a => a.meetingRoomId === this.globalDragState.roomId)
       if (area) {
         const newX = rect.x - area.width/2
         const newY = rect.y - area.height/2
@@ -585,7 +592,7 @@ export default class Game extends Phaser.Scene {
   // Update room position in Redux store
   private updateRoomPositionInStore(roomId: string, centerX: number, centerY: number) {
     const meetingRoomState = store.getState().meetingRoom
-    const area = meetingRoomState.meetingRoomAreas.find(a => a.meetingRoomId === roomId)
+    const area = Object.values(meetingRoomState.meetingRoomAreas).find(a => a.meetingRoomId === roomId)
     
     if (area) {
       // Convert from center position to top-left position
@@ -594,19 +601,8 @@ export default class Game extends Phaser.Scene {
       
       console.log('🎯 [Game] Updating room position in store:', roomId, 'to:', newX, newY)
       
-      // Use global function to update position
-      const updateFunction = (window as any).devModeUpdateRoomArea
-      if (updateFunction) {
-        updateFunction(roomId, {
-          x: newX,
-          y: newY,
-          width: area.width,
-          height: area.height
-        })
-        console.log('🎯 [Game] Store updated successfully for room:', roomId)
-      } else {
-        console.warn('🎯 [Game] devModeUpdateRoomArea function not available')
-      }
+      // Use the saveRoomAreaChanges method for consistency
+      this.saveRoomAreaChanges(roomId, newX, newY, area.width, area.height)
     } else {
       console.error('🎯 [Game] Room area not found in store:', roomId)
     }
@@ -617,11 +613,11 @@ export default class Game extends Phaser.Scene {
     console.log('🎯 [Game] Meeting room state:', meetingRoomState)
     console.log('🎯 [Game] Meeting room areas:', meetingRoomState.meetingRoomAreas)
     
-    if (meetingRoomState.meetingRoomAreas.length === 0) {
+    if (Object.keys(meetingRoomState.meetingRoomAreas).length === 0) {
       console.warn('🎯 [Game] No meeting room areas found in state!')
     }
     
-    meetingRoomState.meetingRoomAreas.forEach(area => {
+    Object.values(meetingRoomState.meetingRoomAreas).forEach(area => {
       console.log('🎯 [Game] Processing area:', area)
       if (area.meetingRoomId) {
         this.createEditableRoomGraphics(area.meetingRoomId, area.x, area.y, area.width, area.height)
@@ -722,7 +718,7 @@ export default class Game extends Phaser.Scene {
         // Store original room data
         const rect = this.editableRoomAreas.get(roomId) as Phaser.GameObjects.Rectangle
         if (rect) {
-          const area = store.getState().meetingRoom.meetingRoomAreas.find(a => a.meetingRoomId === roomId)
+          const area = Object.values(store.getState().meetingRoom.meetingRoomAreas).find(a => a.meetingRoomId === roomId)
           if (area) {
             originalRoomData = { x: area.x, y: area.y, width: area.width, height: area.height }
           }
@@ -867,6 +863,9 @@ export default class Game extends Phaser.Scene {
               height: finalHeight
             })
             console.log('🎯 [Game] Updated room area via resize to:', finalX, finalY, finalWidth, finalHeight)
+            
+            // Save changes to Redux and server
+            this.saveRoomAreaChanges(roomId, finalX, finalY, finalWidth, finalHeight)
           }
         }
       })
@@ -875,6 +874,34 @@ export default class Game extends Phaser.Scene {
     })
   }
   
+  private saveRoomAreaChanges(roomId: string, x: number, y: number, width: number, height: number) {
+    console.log('💾 [Game] Saving room area changes:', { roomId, x, y, width, height })
+    
+    // Update Redux store
+    const updatedArea = {
+      meetingRoomId: roomId,
+      x: Math.round(x),
+      y: Math.round(y), 
+      width: Math.round(width),
+      height: Math.round(height)
+    }
+    
+    store.dispatch(updateMeetingRoomArea(updatedArea))
+    
+    // Send to server
+    if (this.network) {
+      console.log('📡 [Game] Sending area changes to server:', updatedArea)
+      this.network.updateMeetingRoomArea(roomId, {
+        x: updatedArea.x,
+        y: updatedArea.y,
+        width: updatedArea.width,
+        height: updatedArea.height
+      })
+    } else {
+      console.warn('⚠️ [Game] Network not available for saving area changes')
+    }
+  }
+
   private updateHandlePositions(roomId: string, x: number, y: number, width: number, height: number) {
     const handleSize = 10
     const handlePositions = [

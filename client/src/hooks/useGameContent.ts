@@ -12,7 +12,7 @@ export const useGameContent = () => {
   const sessionId = useAppSelector((state) => state.user.sessionId)
 
   const currentRoom = currentMeetingRoomId 
-    ? meetingRooms.find(r => r.id === currentMeetingRoomId) 
+    ? meetingRooms[currentMeetingRoomId] 
     : null
 
   const userCanSendMessages = currentRoom 
@@ -22,8 +22,8 @@ export const useGameContent = () => {
   // Enhanced Debug logging
   console.log('🐛 [useGameContent] Full state debug:', {
     currentMeetingRoomId,
-    meetingRoomsCount: meetingRooms.length,
-    meetingRoomsArray: meetingRooms.map(r => ({ id: r.id, name: r.name, mode: r.mode })),
+    meetingRoomsCount: Object.keys(meetingRooms).length,
+    meetingRoomsArray: Object.values(meetingRooms).map(r => ({ id: r.id, name: r.name, mode: r.mode })),
     currentRoom: currentRoom ? { id: currentRoom.id, name: currentRoom.name } : null,
     userCanSendMessages,
     sessionId,
@@ -33,7 +33,7 @@ export const useGameContent = () => {
   // Log every time meeting room ID changes
   if (currentMeetingRoomId) {
     console.log('🏠 [useGameContent] Meeting room ID detected:', currentMeetingRoomId)
-    console.log('🔍 [useGameContent] Looking for room in:', meetingRooms.map(r => r.id))
+    console.log('🔍 [useGameContent] Looking for room in:', Object.keys(meetingRooms))
   }
 
   return {

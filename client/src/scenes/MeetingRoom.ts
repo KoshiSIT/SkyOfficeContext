@@ -32,8 +32,8 @@ export class MeetingRoomManager {
   }
 
   private setupStoreSubscription() {
-    this.meetingRoomAreas = store.getState().meetingRoom.meetingRoomAreas
-    this.rooms = store.getState().meetingRoom.meetingRooms ?? []
+    this.meetingRoomAreas = Object.values(store.getState().meetingRoom.meetingRoomAreas)
+    this.rooms = Object.values(store.getState().meetingRoom.meetingRooms) ?? []
 
     console.log('🏗️ [MeetingRoomManager] Initial setup:', {
       areasCount: this.meetingRoomAreas.length,
@@ -47,8 +47,8 @@ export class MeetingRoomManager {
     this.updatePrevStates()
 
     store.subscribe(() => {
-      const newRooms = store.getState().meetingRoom.meetingRooms ?? []
-      const newAreas = store.getState().meetingRoom.meetingRoomAreas ?? []
+      const newRooms = Object.values(store.getState().meetingRoom.meetingRooms) ?? []
+      const newAreas = Object.values(store.getState().meetingRoom.meetingRoomAreas) ?? []
 
       if (this.hasAreasChanged(newAreas)) {
         this.meetingRoomAreas = newAreas
