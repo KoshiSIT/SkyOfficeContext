@@ -5,10 +5,7 @@ import { Player, OfficeState, Computer, Whiteboard } from './schema/OfficeState'
 import { Message } from '../../types/Messages'
 import { IRoomData } from '../../types/Rooms'
 import { whiteboardRoomIds } from './schema/OfficeState'
-<<<<<<< Updated upstream
-=======
 import { MeetingRoom, MeetingRoomArea, MeetingRoomChatMessage } from './schema/MeetingRoomState'
->>>>>>> Stashed changes
 import PlayerUpdateCommand from './commands/PlayerUpdateCommand'
 import PlayerUpdateNameCommand from './commands/PlayerUpdateNameCommand'
 import {
@@ -44,21 +41,16 @@ export class SkyOffice extends Room<OfficeState> {
 
     this.setState(new OfficeState())
 
-<<<<<<< Updated upstream
+    // Debug: Check meetingRoomState initialization
+    console.log('OfficeState set, checking meetingRoomState...')
+    console.log('meetingRoomState initialized:', !!this.state.meetingRoomState)
+    console.log('meetingRooms exists:', !!this.state.meetingRoomState?.meetingRooms)
+    console.log('meetingRoomAreas exists:', !!this.state.meetingRoomState?.meetingRoomAreas)
+
     // HARD-CODED: Add 5 computers in a room
     for (let i = 0; i < 5; i++) {
       this.state.computers.set(String(i), new Computer())
-=======
-        // Debug: Check meetingRoomState initialization
-        console.log('OfficeState set, checking meetingRoomState...')
-        console.log('meetingRoomState initialized:', !!this.state.meetingRoomState)
-        console.log('meetingRooms exists:', !!this.state.meetingRoomState?.meetingRooms)
-        console.log('meetingRoomAreas exists:', !!this.state.meetingRoomState?.meetingRoomAreas)
-
-        // HARD-CODED: Add 5 computers in a room
-        for (let i = 0; i < 5; i++) {
-            this.state.computers.set(String(i), new Computer())
-        }
+    }
 
         // HARD-CODED: Add 3 whiteboards in a room
         for (let i = 0; i < 3; i++) {
@@ -566,25 +558,6 @@ export class SkyOffice extends Room<OfficeState> {
                 })
             }
         })
-    }
-
-    // Helper method to check meeting room access permission
-    private canAccessMeetingRoom(userId: string, meetingRoom: MeetingRoom): boolean {
-        if (meetingRoom.mode === 'open') {
-            return true
-        } else if (meetingRoom.mode === 'private') {
-            return meetingRoom.hostUserId === userId || meetingRoom.invitedUsers.includes(userId)
-        } else if (meetingRoom.mode === 'secret') {
-            return meetingRoom.hostUserId === userId
-        }
-        return false
->>>>>>> Stashed changes
-    }
-
-    // HARD-CODED: Add 3 whiteboards in a room
-    for (let i = 0; i < 3; i++) {
-      this.state.whiteboards.set(String(i), new Whiteboard())
-    }
 
     // when a player connect to a computer, add to the computer connectedUser array
     this.onMessage(Message.CONNECT_TO_COMPUTER, (client, message: { computerId: string }) => {
@@ -734,5 +707,61 @@ export class SkyOffice extends Room<OfficeState> {
 
     console.log('room', this.roomId, 'disposing...')
     this.dispatcher.stop()
+  }
+
+  // Helper method to check meeting room access permission
+  private canAccessMeetingRoom(userId: string, meetingRoom: MeetingRoom): boolean {
+    if (meetingRoom.mode === 'open') {
+      return true
+    } else if (meetingRoom.mode === 'private') {
+      return meetingRoom.hostUserId === userId || meetingRoom.invitedUsers.includes(userId)
+    } else if (meetingRoom.mode === 'secret') {
+      return meetingRoom.hostUserId === userId
+    }
+    return false
+  }
+
+  private initializeDefaultMeetingRoom() {
+    console.log('🏢 [SkyOffice] Initializing default meeting room...')
+    
+    if (!this.state.meetingRoomState) {
+      console.error('❌ [SkyOffice] meetingRoomState is not initialized!')
+      return
+    }
+
+    // Create a test meeting room
+    const testRoom = new MeetingRoom()
+    testRoom.id = 'room-001'
+    testRoom.name = 'Test Meeting Room'
+    testRoom.mode = 'open'
+    testRoom.hostUserId = 'system'
+    testRoom.invitedUsers = []
+    testRoom.participants = []
+
+    this.state.meetingRoomState.meetingRooms.set('room-001', testRoom)
+    console.log('✅ [SkyOffice] Created test meeting room:', {
+      id: testRoom.id,
+      name: testRoom.name,
+      mode: testRoom.mode,
+      totalRooms: this.state.meetingRoomState.meetingRooms.size
+    })
+
+    // Create a test meeting room area
+    const testArea = new MeetingRoomArea()
+    testArea.meetingRoomId = 'room-001'
+    testArea.x = 400
+    testArea.y = 200
+    testArea.width = 200
+    testArea.height = 150
+
+    this.state.meetingRoomState.meetingRoomAreas.set('area-001', testArea)
+    console.log('✅ [SkyOffice] Created test meeting room area:', {
+      id: testArea.meetingRoomId,
+      coordinates: `${testArea.x},${testArea.y} to ${testArea.x + testArea.width},${testArea.y + testArea.height}`,
+      totalAreas: this.state.meetingRoomState.meetingRoomAreas.size
+    })
+
+    // Force broadcast the state change
+    console.log('📡 [SkyOffice] Broadcasting meeting room state to all clients...')
   }
 }

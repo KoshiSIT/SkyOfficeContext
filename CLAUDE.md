@@ -333,5 +333,51 @@ import type { WorkStatus } from '../types'
 - **重要なログタグ**: `[MeetingRoomChat]`, `[Network]`, `[ChatStore]`, `[Server]`
 - **コンソール確認**: 送受信プロセスの詳細ログが出力される
 
+## 📚 **ドキュメント体系** 🆕
+
+### **新しいドキュメント管理システム**
+- **場所**: `/docs/` ディレクトリ
+- **開始日**: 2025-07-01
+- **目的**: 修正履歴、機能仕様、トラブルシューティングの体系的管理
+
+### **ドキュメント構造**
+```
+docs/
+├── README.md                           # ドキュメント体系の説明
+├── fixes/                              # バグ修正・技術的問題
+│   ├── 2025-07-01_meeting-room-chat-rendering.md
+│   └── 2025-07-01_dialog-positioning-fix.md
+├── features/                           # 機能実装ガイド
+│   └── meeting-room-chat.md
+├── troubleshooting/                    # 共通問題と解決法
+│   └── css-positioning-issues.md
+└── [future directories...]
+```
+
+### **命名規則**
+- **修正履歴**: `YYYY-MM-DD_short-description.md`
+- **機能仕様**: `feature-name.md`
+- **トラブル**: `problem-category.md`
+
+### **最新の重要修正** 🆕
+1. **会議室チャットレンダリング問題** (2025-07-01)
+   - 原因: `position: absolute` → `position: fixed`
+   - 影響: React UI とPhaser Canvasの重なり問題
+   
+2. **ダイアログ位置ずれ問題** (2025-07-01)
+   - 原因: 同じCSS positioning問題
+   - 解決: 全ダイアログの統一的修正
+
+### **ベストプラクティス確立** 🆕
+- **ゲーム上のReact UI**: `position: fixed` + `z-index: 9999+`
+- **修正の即座記録**: 問題解決と同時にドキュメント化
+- **パターン認識**: 共通問題のトラブルシューティングガイド作成
+
+### **会議室チャット機能 - 完全実装済み** ✅
+- **状態**: 完全動作・本番利用可能
+- **主要修正**: CSS positioning問題解決
+- **機能**: リアルタイムチャット、権限管理、履歴、UI統合
+- **ドキュメント**: 完全仕様書作成済み (`docs/features/meeting-room-chat.md`)
+
 ---
-**最終更新**: 2025-06-23 - アーキテクチャ・リファクタリングガイド追加
+**最終更新**: 2025-07-01 - ドキュメント体系導入・会議室チャット完全実装・CSS positioning問題解決

@@ -19,6 +19,23 @@ export const useGameContent = () => {
     ? canSendMessages(sessionId, currentRoom) 
     : false
 
+  // Enhanced Debug logging
+  console.log('🐛 [useGameContent] Full state debug:', {
+    currentMeetingRoomId,
+    meetingRoomsCount: meetingRooms.length,
+    meetingRoomsArray: meetingRooms.map(r => ({ id: r.id, name: r.name, mode: r.mode })),
+    currentRoom: currentRoom ? { id: currentRoom.id, name: currentRoom.name } : null,
+    userCanSendMessages,
+    sessionId,
+    shouldShowChat: !!(currentMeetingRoomId && currentRoom)
+  })
+
+  // Log every time meeting room ID changes
+  if (currentMeetingRoomId) {
+    console.log('🏠 [useGameContent] Meeting room ID detected:', currentMeetingRoomId)
+    console.log('🔍 [useGameContent] Looking for room in:', meetingRooms.map(r => r.id))
+  }
+
   return {
     isDevMode,
     currentMeetingRoomId,

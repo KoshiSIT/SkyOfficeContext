@@ -5,25 +5,14 @@ import { MeetingRoom, MeetingRoomArea } from '../stores/MeetingRoomStore'
 import { setCurrentMeetingRoomId, pushMeetingRoomUserJoinedMessage, pushMeetingRoomUserLeftMessage } from '../stores/ChatStore'
 
 export class MeetingRoomManager {
-<<<<<<< Updated upstream
   private scene: Phaser.Scene
   private myPlayer: MyPlayer
-  // meeting rooms and areas
   private rooms: MeetingRoom[] = []
+  private canAccess: boolean = true
   private meetingRoomAreas: MeetingRoomArea[] = []
   private meetingRoomZones: Phaser.GameObjects.Zone[] = []
   private prevRooms: MeetingRoom[] = []
-=======
-    private scene: Phaser.Scene
-    private myPlayer: MyPlayer
-    // Meeting rooms and areas
-    private rooms: MeetingRoom[] = []
-    private canAccess: boolean = true
-    private meetingRoomAreas: MeetingRoomArea[] = []
-    private meetingRoomZones: Phaser.GameObjects.Zone[] = []
-    private prevRooms: MeetingRoom[] = []
-    private prevAreas: MeetingRoomArea[] = [] // Store previous areas for comparison
->>>>>>> Stashed changes
+  private prevAreas: MeetingRoomArea[] = []
 
   //graphics for meeting room MeetingRoomAreas
   private meetAreaGraphics!: Phaser.GameObjects.Graphics
@@ -34,25 +23,46 @@ export class MeetingRoomManager {
     this.scene = scene
     this.myPlayer = myPlayer
     this.initializeGraphics()
-    this.seupStoreSubscription()
+    this.setupStoreSubscription()
   }
+  
   private initializeGraphics() {
     this.meetAreaGraphics = this.scene.add.graphics()
     this.meetAreaOverlay = this.scene.add.graphics()
   }
 
-<<<<<<< Updated upstream
-  private seupStoreSubscription() {
+  private setupStoreSubscription() {
     this.meetingRoomAreas = store.getState().meetingRoom.meetingRoomAreas
-    store.subscribe(() => {
-      this.rooms = store.getState().meetingRoom.meetingRooms ?? []
-      console.log('MeetingRoomManager: Rooms updated', this.rooms)
-      this.meetingRoomAreas = store.getState().meetingRoom.meetingRoomAreas ?? []
-      this.drawMeetingRoomAreas()
-      this.createMeetingRoomZones()
+    this.rooms = store.getState().meetingRoom.meetingRooms ?? []
 
-      this.handleRoomUpdates()
-      this.updatePrevRooms()
+    console.log('🏗️ [MeetingRoomManager] Initial setup:', {
+      areasCount: this.meetingRoomAreas.length,
+      roomsCount: this.rooms.length,
+      areas: this.meetingRoomAreas.map(a => ({ id: a.meetingRoomId, x: a.x, y: a.y, w: a.width, h: a.height })),
+      rooms: this.rooms.map(r => ({ id: r.id, name: r.name, mode: r.mode }))
+    })
+
+    this.drawMeetingRoomAreas()
+    this.createMeetingRoomZones()
+    this.updatePrevStates()
+
+    store.subscribe(() => {
+      const newRooms = store.getState().meetingRoom.meetingRooms ?? []
+      const newAreas = store.getState().meetingRoom.meetingRoomAreas ?? []
+
+      if (this.hasAreasChanged(newAreas)) {
+        this.meetingRoomAreas = newAreas
+        this.drawMeetingRoomAreas()
+        this.createMeetingRoomZones()
+      }
+
+      if (this.hasRoomsChanged(newRooms)) {
+        this.rooms = newRooms
+        this.handleRoomUpdates()
+        this.drawMeetingRoomAreas()
+      }
+
+      this.updatePrevStates()
     })
   }
 
@@ -64,80 +74,69 @@ export class MeetingRoomManager {
     const nextId = area ? area.meetingRoomId : null
     if (nextId !== this.myPlayer.currentMeetingRoomId) {
       this.handleMeetingRoomTransition(nextId)
-=======
->>>>>>> Stashed changes
     }
   }
 
-<<<<<<< Updated upstream
   private handleMeetingRoomTransition(nextId: string | null): void {
+    console.log('🚪 [MeetingRoomManager] Room transition:', {
+      nextId,
+      availableRooms: this.rooms.map(r => ({ id: r.id, name: r.name })),
+      currentRoomId: this.myPlayer.currentMeetingRoomId,
+      playerPosition: { x: this.myPlayer.x, y: this.myPlayer.y },
+      roomAreas: this.meetingRoomAreas.map(a => ({ 
+        id: a.meetingRoomId, 
+        area: `(${a.x}-${a.x + a.width}, ${a.y}-${a.y + a.height})` 
+      }))
+    })
+
     if (nextId) {
       const room = this.rooms.find((r) => r.id === nextId)
       if (room) {
-=======
-    private initializeGraphics() {
-        this.meetAreaGraphics = this.scene.add.graphics()
-        this.meetAreaOverlay = this.scene.add.graphics()
+        console.log('✅ [MeetingRoomManager] Entering room:', { id: room.id, name: room.name })
+        this.myPlayer.currentMeetingRoomId = nextId
+        store.dispatch(setCurrentMeetingRoomId(nextId))
+        this.scene.events.emit('enter-meeting-room', nextId)
+      } else {
+        console.warn('❌ [MeetingRoomManager] Room not found:', nextId)
+      }
+    } else {
+      const previousRoomId = this.myPlayer.currentMeetingRoomId
+      if (previousRoomId) {
+        console.log('🚪 [MeetingRoomManager] Leaving room:', previousRoomId)
+        this.myPlayer.currentMeetingRoomId = null
+        store.dispatch(setCurrentMeetingRoomId(null))
+        this.scene.events.emit('leave-meeting-room', previousRoomId)
+      }
+    }
+  }
+
+  // Check if areas have changed
+  private hasAreasChanged(newAreas: MeetingRoomArea[]): boolean {
+    if (this.prevAreas.length !== newAreas.length) {
+      return true
     }
 
-    private setupStoreSubscription() {
-        this.meetingRoomAreas = store.getState().meetingRoom.meetingRoomAreas
-        this.rooms = store.getState().meetingRoom.meetingRooms ?? []
+    for (let i = 0; i < newAreas.length; i++) {
+      const newArea = newAreas[i]
+      const prevArea = this.prevAreas[i]
 
-        // Initial rendering
-        this.drawMeetingRoomAreas()
-        this.createMeetingRoomZones()
-        this.updatePrevStates()
-
-        store.subscribe(() => {
-            const newRooms = store.getState().meetingRoom.meetingRooms ?? []
-            const newAreas = store.getState().meetingRoom.meetingRoomAreas ?? []
-
-            // Recreate areas and zones only when areas have changed
-            if (this.hasAreasChanged(newAreas)) {
-                this.meetingRoomAreas = newAreas
-                this.drawMeetingRoomAreas()
-                this.createMeetingRoomZones()
-            }
-
-            // Update room processing only when rooms have changed
-            if (this.hasRoomsChanged(newRooms)) {
-                this.rooms = newRooms
-                this.handleRoomUpdates() // Handle room state changes and update signals
-                this.drawMeetingRoomAreas() // Redraw if access permissions have changed
-            }
-
-            this.updatePrevStates()
-        })
+      if (
+        !prevArea ||
+        newArea.meetingRoomId !== prevArea.meetingRoomId ||
+        newArea.x !== prevArea.x ||
+        newArea.y !== prevArea.y ||
+        newArea.width !== prevArea.width ||
+        newArea.height !== prevArea.height
+      ) {
+        return true
+      }
     }
 
-    // Check if areas have changed
-    private hasAreasChanged(newAreas: MeetingRoomArea[]): boolean {
-        if (this.prevAreas.length !== newAreas.length) {
-            return true
-        }
+    return false
+  }
 
-        for (let i = 0; i < newAreas.length; i++) {
-            const newArea = newAreas[i]
-            const prevArea = this.prevAreas[i]
-
-            if (
-                !prevArea ||
-                newArea.meetingRoomId !== prevArea.meetingRoomId ||
-                newArea.x !== prevArea.x ||
-                newArea.y !== prevArea.y ||
-                newArea.width !== prevArea.width ||
-                newArea.height !== prevArea.height
-            ) {
-                return true
-            }
-        }
-
-        return false
-    }
-
-    // Check if rooms have changed
-    private hasRoomsChanged(newRooms: MeetingRoom[]): boolean {
+  // Check if rooms have changed
+  private hasRoomsChanged(newRooms: MeetingRoom[]): boolean {
         if (this.prevRooms.length !== newRooms.length) {
             return true
         }
@@ -197,84 +196,7 @@ export class MeetingRoomManager {
         }
     }
 
-    checkPlayerInMeetingRoom(x: number, y: number): void {
-        const area = this.meetingRoomAreas.find(
-            (a) => x >= a.x && x <= a.x + a.width && y >= a.y && y <= a.y + a.height
-        )
-
-        const nextId = area ? area.meetingRoomId : null
-        if (nextId !== this.myPlayer.currentMeetingRoomId) {
-            this.handleMeetingRoomTransition(nextId)
-            this.updateCanAccessState() // Update state on room transition
-        }
-    }
-
-    private handleMeetingRoomTransition(nextId: string | null): void {
-        if (nextId) {
-            const room = this.rooms.find((r) => r.id === nextId)
-            if (room) {
-                const myUserId = this.myPlayer.playerId
-
-                if (room.mode === 'private') {
-                    if (
-                        (room.hostUserId !== myUserId && !Array.isArray(room.invitedUsers)) ||
-                        !room.invitedUsers.includes(myUserId)
-                    ) {
-                        console.log('[MeetingRoomManager] You are not invited to this private room')
-                        return
-                    } else {
-                        console.log('[MeetingRoomManager] You are entering a private room')
-                        this.myPlayer.currentMeetingRoomId = nextId
-                    }
-                } else if (room.mode === 'secret') {
-                    if (room.hostUserId !== myUserId) {
-                        console.log('[MeetingRoomManager] You are not allowed to enter this secret room')
-                        return
-                    } else {
-                        console.log('[MeetingRoomManager] You are entering a secret room')
-                        this.myPlayer.currentMeetingRoomId = nextId
-                    }
-                } else {
-                    console.log('[MeetingRoomManager] You are entering an open room')
-                    this.myPlayer.currentMeetingRoomId = nextId
-                }
-
-                // Update chat store with current meeting room
-                store.dispatch(setCurrentMeetingRoomId(nextId))
-                
-                // Add user joined message to meeting room chat
-                store.dispatch(pushMeetingRoomUserJoinedMessage({
-                    meetingRoomId: nextId,
-                    userName: this.myPlayer.name || this.myPlayer.playerId
-                }))
-
-                // Trigger meeting room enter event
-                this.scene.events.emit('enter-meeting-room', nextId, room)
-            }
-        } else {
-            console.log('[MeetingRoomManager] You are leaving the meeting room')
-            const previousRoomId = this.myPlayer.currentMeetingRoomId
-            
-            if (previousRoomId) {
-                // Add user left message to meeting room chat
-                store.dispatch(pushMeetingRoomUserLeftMessage({
-                    meetingRoomId: previousRoomId,
-                    userName: this.myPlayer.name || this.myPlayer.playerId
-                }))
-            }
-            
-            this.myPlayer.currentMeetingRoomId = null
-            
-            // Update chat store - no longer in a meeting room
-            store.dispatch(setCurrentMeetingRoomId(null))
-
-            // Trigger meeting room leave event
-            this.scene.events.emit('leave-meeting-room', previousRoomId)
-        }
-    }
-
     private canAccessMeetingRoom(room: MeetingRoom): boolean {
->>>>>>> Stashed changes
         const myUserId = this.myPlayer.playerId
 
         if (room.mode === 'private') {
@@ -282,52 +204,16 @@ export class MeetingRoomManager {
             (room.hostUserId !== myUserId && !Array.isArray(room.invitedUsers)) ||
             !room.invitedUsers.includes(myUserId)
           ) {
-            console.log('[MeetingRoomManager] You are not invited to this private room')
-            return
-          } else {
-            console.log('[MeetingRoomManager] You are entering a private room')
-            this.myPlayer.currentMeetingRoomId = nextId
+            return false
           }
         } else if (room.mode === 'secret') {
           if (room.hostUserId !== myUserId) {
-            console.log('[MeetingRoomManager] You are not allowed to enter this secret room')
-            return
-          } else {
-            console.log('[MeetingRoomManager] You are entering a secret room')
-            this.myPlayer.currentMeetingRoomId = nextId
+            return false
           }
-        } else {
-          console.log('[MeetingRoomManager] You are entering an open room')
-          this.myPlayer.currentMeetingRoomId = nextId
         }
-
-        // trigger meeting room enter event
-        this.scene.events.emit('enter-meeting-room', nextId, room)
-      }
-    } else {
-      console.log('[MeetingRoomManager] You are leaving the meeting room')
-      const previousRoomId = this.myPlayer.currentMeetingRoomId
-      this.myPlayer.currentMeetingRoomId = null
-
-      // trigger meeting room leave event
-      this.scene.events.emit('leave-meeting-room', previousRoomId)
+        
+        return true
     }
-  }
-
-  private canAccessMeetingRoom(room: MeetingRoom): boolean {
-    const myUserId = this.myPlayer.playerId
-
-    if (room.mode === 'private') {
-      return (
-        room.hostUserId === myUserId ||
-        (Array.isArray(room.invitedUsers) && room.invitedUsers.includes(myUserId))
-      )
-    } else if (room.mode === 'secret') {
-      return room.hostUserId === myUserId
-    } else {
-      return true // open room
-    }
-  }
 
   private createMeetingRoomZones(): void {
     // delete existing colliders and zones
@@ -365,47 +251,8 @@ export class MeetingRoomManager {
     console.log('[MeetingRoomManager] Created zones:', this.meetingRoomZones.length)
   }
 
+
   private drawMeetingRoomAreas(): void {
-    this.meetAreaGraphics.clear()
-    this.meetAreaOverlay.clear()
-
-    this.meetAreaGraphics.setDepth(1000)
-    this.meetAreaOverlay.setDepth(1001)
-
-    for (const area of this.meetingRoomAreas) {
-      const room = this.rooms.find((r) => r.id === area.meetingRoomId)
-
-      if (room) {
-        const canAccess = this.canAccessMeetingRoom(room)
-
-        if (canAccess) {
-          // can access green border
-          this.meetAreaGraphics.lineStyle(3, 0x00ff00, 1)
-          this.meetAreaGraphics.strokeRect(area.x, area.y, area.width, area.height)
-        } else {
-          // cannot access - red border
-          this.meetAreaGraphics.lineStyle(3, 0xff0000, 1)
-          this.meetAreaGraphics.strokeRect(area.x, area.y, area.width, area.height)
-
-          this.meetAreaOverlay.fillStyle(0x808080, 0.6)
-          this.meetAreaOverlay.fillRect(area.x, area.y, area.width, area.height)
-
-          this.showRestrictedText(area)
-        }
-<<<<<<< Updated upstream
-      } else {
-        // If room not found, draw a red border
-        this.meetAreaGraphics.lineStyle(3, 0xff0000, 1)
-=======
-        this.meetingRoomColliders.clear()
-
-        for (const zone of this.meetingRoomZones) {
-            zone.destroy()
-        }
-        this.meetingRoomZones = []
-    }
-
-    private drawMeetingRoomAreas(): void {
         // Don't draw if in visual edit mode
         if (this.isVisualEditMode) {
             console.log('🎯 [MeetingRoomManager] Skipping drawing - in visual edit mode')
@@ -425,6 +272,8 @@ export class MeetingRoomManager {
                 this.drawMeetingRoomArea(area)
             }
         }
+
+        console.log('[MeetingRoomManager] Drew room areas:', this.meetingRoomAreas.length)
     }
 
     // Methods to hide/show room areas for visual editing mode
@@ -442,7 +291,6 @@ export class MeetingRoomManager {
         this.isVisualEditMode = false
         this.meetAreaGraphics.setVisible(true)
         this.meetAreaOverlay.setVisible(true)
-        // Redraw after exiting visual edit mode
         this.drawMeetingRoomAreas()
     }
 
@@ -453,21 +301,14 @@ export class MeetingRoomManager {
         const canAccess = this.canAccessMeetingRoom(room)
         
         if (canAccess) {
-            // 緑の枠線（アクセス可能）
             this.meetAreaGraphics.lineStyle(3, 0x00ff00, 1)
         } else {
-            // 赤の枠線（アクセス不可）
             this.meetAreaGraphics.lineStyle(3, 0xff0000, 1)
             this.showRestrictedText(area)
         }
-        
->>>>>>> Stashed changes
         this.meetAreaGraphics.strokeRect(area.x, area.y, area.width, area.height)
-      }
     }
 
-    console.log('[MeetingRoomManager] Drew room areas:', this.meetingRoomAreas.length)
-  }
   private showRestrictedText(area: MeetingRoomArea): void {
     const centerX = area.x + area.width / 2
     const centerY = area.y + area.height / 2
@@ -531,55 +372,19 @@ export class MeetingRoomManager {
 
   update(): void {}
 
+  private updatePrevStates(): void {
+    this.prevRooms = JSON.parse(JSON.stringify(this.rooms))
+    this.prevAreas = JSON.parse(JSON.stringify(this.meetingRoomAreas))
+  }
+
   destroy(): void {
     for (const collider of this.meetingRoomColliders.values()) {
       collider.destroy()
     }
 
-<<<<<<< Updated upstream
     this.meetingRoomColliders.clear()
     for (const zone of this.meetingRoomZones) {
       zone.destroy()
-=======
-    private handleRoomUpdates(): void {
-        console.log('[MeetingRoomManager] handleRoomUpdates called')
-
-        // Process each room for access permission changes
-        for (const room of this.rooms) {
-            const prevRoom = this.prevRooms.find((r) => r.id === room.id)
-            if (!prevRoom) continue // If the room is new, skip
-
-            // Check if access permission has changed
-            const prevCanAccess = this.canAccessMeetingRoom(prevRoom)
-            const nowCanAccess = this.canAccessMeetingRoom(room)
-
-            if (prevCanAccess !== nowCanAccess) {
-                console.log(
-                    `[MeetingRoomManager] Access permission changed for room ${room.id}: ${prevCanAccess} → ${nowCanAccess}`
-                )
-
-                // Update state when room permission changes
-                this.canAccess = nowCanAccess
-                this.scene.events.emit('meeting-room-access-changed', {
-                    roomId: room.id,
-                    canAccess: nowCanAccess
-                })
-
-                this.onMeetingRoomPermissionChanged(room.id, nowCanAccess)
-            }
-
-            // Check mode change from private/secret to open
-            if ((prevRoom.mode === 'private' || prevRoom.mode === 'secret') && room.mode === 'open') {
-                console.log(`[MeetingRoomManager] Room ${room.id} changed to open mode`)
-                this.canAccess = true
-                this.scene.events.emit('meeting-room-access-changed', {
-                    roomId: room.id,
-                    canAccess: true
-                })
-                this.onMeetingRoomPermissionChanged(room.id, true)
-            }
-        }
->>>>>>> Stashed changes
     }
     this.meetingRoomZones = []
 
@@ -587,7 +392,3 @@ export class MeetingRoomManager {
     this.meetAreaOverlay?.destroy()
   }
 }
-<<<<<<< Updated upstream
-=======
-
->>>>>>> Stashed changes

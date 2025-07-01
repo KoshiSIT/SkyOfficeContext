@@ -14,6 +14,7 @@ import MyPlayer from '../characters/MyPlayer'
 import OtherPlayer from '../characters/OtherPlayer'
 import PlayerSelector from '../characters/PlayerSelector'
 import Network from '../services/Network'
+import { phaserEvents, Event } from '../events/EventCenter'
 import { IPlayer } from '../../../types/IOfficeState'
 import { PlayerBehavior } from '../../../types/PlayerBehavior'
 import { ItemType } from '../../../types/Items'
@@ -217,14 +218,14 @@ export default class Game extends Phaser.Scene {
 
     //**********************
     // register network event listeners
-    this.network.onPlayerJoined(this.handlePlayerJoined, this)
-    this.network.onPlayerLeft(this.handlePlayerLeft, this)
-    this.network.onMyPlayerReady(this.handleMyPlayerReady, this)
-    this.network.onMyPlayerVideoConnected(this.handleMyVideoConnected, this)
-    this.network.onPlayerUpdated(this.handlePlayerUpdated, this)
-    this.network.onItemUserAdded(this.handleItemUserAdded, this)
-    this.network.onItemUserRemoved(this.handleItemUserRemoved, this)
-    this.network.onChatMessageAdded(this.handleChatMessageAdded, this)
+    phaserEvents.on(Event.PLAYER_JOINED, this.handlePlayerJoined, this)
+    phaserEvents.on(Event.PLAYER_LEFT, this.handlePlayerLeft, this)
+    phaserEvents.on(Event.MY_PLAYER_READY, this.handleMyPlayerReady, this)
+    phaserEvents.on(Event.MY_PLAYER_VIDEO_CONNECTED, this.handleMyVideoConnected, this)
+    phaserEvents.on(Event.PLAYER_UPDATED, this.handlePlayerUpdated, this)
+    phaserEvents.on(Event.ITEM_USER_ADDED, this.handleItemUserAdded, this)
+    phaserEvents.on(Event.ITEM_USER_REMOVED, this.handleItemUserRemoved, this)
+    phaserEvents.on('chat-message-added', this.handleChatMessageAdded, this)
     
     // CRITICAL: Ensure input is properly enabled
     console.log('🔧 [Game] Enabling input systems explicitly...')

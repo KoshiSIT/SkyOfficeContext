@@ -13,27 +13,17 @@ export interface IPlayerAppearance {
 }
 
 export interface IPlayer extends Schema {
-<<<<<<< Updated upstream
   name: string
   x: number
   y: number
   anim: string
   readyToConnect: boolean
   videoConnected: boolean
-=======
-    name: string
-    x: number
-    y: number
-    anim: string
-    readyToConnect: boolean
-    videoConnected: boolean
-    // 勤務関連の新しいフィールド
-    workStatus: WorkStatus
-    workStartTime: number
-    lastBreakTime: number
-    fatigueLevel: number // 0-100
-    appearance: IPlayerAppearance
->>>>>>> Stashed changes
+  workStatus: WorkStatus
+  workStartTime: number
+  lastBreakTime: number
+  fatigueLevel: number
+  appearance: IPlayerAppearance
 }
 
 export interface IComputer extends Schema {
@@ -46,22 +36,17 @@ export interface IWhiteboard extends Schema {
 }
 
 export interface IChatMessage extends Schema {
-<<<<<<< Updated upstream
   author: string
   createdAt: number
   content: string
-=======
-    author: string
-    createdAt: number
-    content: string
 }
 
 export interface IMeetingRoomChatMessage extends Schema {
-    author: string
-    createdAt: number
-    content: string
-    meetingRoomId: string
-    messageId: string
+  author: string
+  createdAt: number
+  content: string
+  meetingRoomId: string
+  messageId: string
 }
 export interface IMeetingRoom {
     id: string
@@ -83,8 +68,7 @@ export interface IMeetingRoomArea {
 export interface IMeetingRoomState {
     meetingRooms: MapSchema<IMeetingRoom>
     meetingRoomAreas: MapSchema<IMeetingRoomArea>
-    meetingRoomChatMessages: ArraySchema<IMeetingRoomChatMessage>
->>>>>>> Stashed changes
+  meetingRoomChatMessages: ArraySchema<IMeetingRoomChatMessage>
 }
 
 export interface IOfficeState extends Schema {
@@ -92,4 +76,5 @@ export interface IOfficeState extends Schema {
   computers: MapSchema<IComputer>
   whiteboards: MapSchema<IWhiteboard>
   chatMessages: ArraySchema<IChatMessage>
+  meetingRoomState: IMeetingRoomState
 }

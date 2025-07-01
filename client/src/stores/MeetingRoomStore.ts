@@ -67,6 +67,32 @@ export const meetingRoomSlice = createSlice({
             state.meetingRoomAreas = state.meetingRoomAreas.filter(area => area.meetingRoomId !== action.payload);
         },
 
+        // Server-specific actions for network sync
+        addMeetingRoomFromServer: (state, action: PayloadAction<MeetingRoom>) => {
+            // Check if room already exists to avoid duplicates
+            const exists = state.meetingRooms.find(room => room.id === action.payload.id);
+            if (!exists) {
+                state.meetingRooms.push(action.payload);
+                console.log('📥 [MeetingRoomStore] Added room from server:', action.payload.id);
+            }
+        },
+        removeMeetingRoomFromServer: (state, action: PayloadAction<string>) => {
+            state.meetingRooms = state.meetingRooms.filter(room => room.id !== action.payload);
+            console.log('📤 [MeetingRoomStore] Removed room from server:', action.payload);
+        },
+        addMeetingRoomAreaFromServer: (state, action: PayloadAction<MeetingRoomArea>) => {
+            // Check if area already exists to avoid duplicates
+            const exists = state.meetingRoomAreas.find(area => area.meetingRoomId === action.payload.meetingRoomId);
+            if (!exists) {
+                state.meetingRoomAreas.push(action.payload);
+                console.log('📥 [MeetingRoomStore] Added area from server:', action.payload.meetingRoomId);
+            }
+        },
+        removeMeetingRoomAreaFromServer: (state, action: PayloadAction<string>) => {
+            state.meetingRoomAreas = state.meetingRoomAreas.filter(area => area.meetingRoomId !== action.payload);
+            console.log('📤 [MeetingRoomStore] Removed area from server:', action.payload);
+        },
+
     }
 });
 
@@ -79,6 +105,10 @@ export const {
     addMeetingRoomArea,
     updateMeetingRoomArea,
     removeMeetingRoomArea,
+    addMeetingRoomFromServer,
+    removeMeetingRoomFromServer,
+    addMeetingRoomAreaFromServer,
+    removeMeetingRoomAreaFromServer,
 } = meetingRoomSlice.actions;
 
 export default meetingRoomSlice.reducer;

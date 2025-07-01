@@ -45,13 +45,16 @@ const MeetingRoomChat: React.FC<MeetingRoomChatProps> = ({
 
     useEffect(() => {
         if (meetingRoomId) {
+            console.log('🏠 [MeetingRoomChat] Entering room, making chat visible:', meetingRoomId)
             setIsVisible(true)
             // Request chat history when entering a room
             const game = phaserGame.scene.keys.game as Game
             if (game?.network) {
+                console.log('📜 [MeetingRoomChat] Requesting chat history for room:', meetingRoomId)
                 game.network.getMeetingRoomChatHistory(meetingRoomId)
             }
         } else {
+            console.log('🚪 [MeetingRoomChat] No room ID, hiding chat')
             setIsVisible(false)
         }
     }, [meetingRoomId])
@@ -148,15 +151,27 @@ const MeetingRoomChat: React.FC<MeetingRoomChatProps> = ({
         }
     }
 
+    console.log('🔍 [MeetingRoomChat] Render check:', {
+        isVisible,
+        meetingRoomId,
+        roomName,
+        canSendMessages,
+        messageCount: meetingRoomChatMessages.length,
+        shouldRender: isVisible && meetingRoomId
+    })
+
     if (!isVisible || !meetingRoomId) {
+        console.log('❌ [MeetingRoomChat] Not rendering - isVisible:', isVisible, 'meetingRoomId:', meetingRoomId)
         return null
     }
+
+    console.log('✅ [MeetingRoomChat] Rendering chat component')
 
     return (
         <Paper 
             elevation={3}
             sx={{
-                position: 'absolute',
+                position: 'fixed',
                 top: 20,
                 right: 20,
                 width: 350,
@@ -166,7 +181,8 @@ const MeetingRoomChat: React.FC<MeetingRoomChatProps> = ({
                 backgroundColor: 'rgba(255, 255, 255, 0.95)',
                 backdropFilter: 'blur(10px)',
                 border: '1px solid rgba(0, 0, 0, 0.1)',
-                zIndex: 1000,
+                zIndex: 9999,
+                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
             }}
         >
             {/* Header */}

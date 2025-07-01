@@ -6,11 +6,8 @@ import whiteboardReducer from './WhiteboardStore'
 import chatReducer from './ChatStore'
 import roomReducer from './RoomStore'
 import meetingRoomReducer from './MeetingRoomStore'
-<<<<<<< Updated upstream
-=======
 import devModeReducer from './DevModeStore'
 import workReducer from './WorkStore'
->>>>>>> Stashed changes
 
 enableMapSet()
 
@@ -22,11 +19,8 @@ const store = configureStore({
     whiteboard: whiteboardReducer,
     chat: chatReducer,
     room: roomReducer,
-<<<<<<< Updated upstream
-=======
     devMode: devModeReducer,
     work: workReducer,
->>>>>>> Stashed changes
   },
   // Temporary disable serialize check for redux as we store MediaStream in ComputerStore.
   // https://stackoverflow.com/a/63244831

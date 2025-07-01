@@ -1,12 +1,22 @@
 import { Schema, ArraySchema, SetSchema, MapSchema, type } from '@colyseus/schema'
 import {
-<<<<<<< Updated upstream
   IPlayer,
   IOfficeState,
   IComputer,
   IWhiteboard,
   IChatMessage,
+  IPlayerAppearance,
+  WorkStatus,
+  ClothingType,
+  AccessoryType,
 } from '../../../types/IOfficeState'
+
+import { MeetingRoomState } from './MeetingRoomState'
+
+export class PlayerAppearance extends Schema implements IPlayerAppearance {
+  @type('string') clothing: ClothingType = 'business'
+  @type('string') accessory: AccessoryType = 'none'
+}
 
 export class Player extends Schema implements IPlayer {
   @type('string') name = ''
@@ -15,39 +25,11 @@ export class Player extends Schema implements IPlayer {
   @type('string') anim = 'adam_idle_down'
   @type('boolean') readyToConnect = false
   @type('boolean') videoConnected = false
-=======
-    IPlayer,
-    IOfficeState,
-    IComputer,
-    IWhiteboard,
-    IChatMessage,
-    IPlayerAppearance,
-    WorkStatus,
-    ClothingType,
-    AccessoryType,
-} from '../../../types/IOfficeState'
-
-import { MeetingRoomState } from './MeetingRoomState'
-
-export class PlayerAppearance extends Schema implements IPlayerAppearance {
-    @type('string') clothing: ClothingType = 'business'
-    @type('string') accessory: AccessoryType = 'none'
-}
-
-export class Player extends Schema implements IPlayer {
-    @type('string') name = ''
-    @type('number') x = 705
-    @type('number') y = 500
-    @type('string') anim = 'adam_idle_down'
-    @type('boolean') readyToConnect = false
-    @type('boolean') videoConnected = false
-    // 勤務関連の新しいフィールド
-    @type('string') workStatus: WorkStatus = 'off-duty'
-    @type('number') workStartTime = 0
-    @type('number') lastBreakTime = 0
-    @type('number') fatigueLevel = 0
-    @type(PlayerAppearance) appearance = new PlayerAppearance()
->>>>>>> Stashed changes
+  @type('string') workStatus: WorkStatus = 'off-duty'
+  @type('number') workStartTime = 0
+  @type('number') lastBreakTime = 0
+  @type('number') fatigueLevel = 0
+  @type(PlayerAppearance) appearance = new PlayerAppearance()
 }
 
 export class Computer extends Schema implements IComputer {
@@ -77,6 +59,9 @@ export class OfficeState extends Schema implements IOfficeState {
 
   @type([ChatMessage])
   chatMessages = new ArraySchema<ChatMessage>()
+
+  @type(MeetingRoomState)
+  meetingRoomState = new MeetingRoomState()
 }
 
 export const whiteboardRoomIds = new Set<string>()

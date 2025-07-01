@@ -1,16 +1,12 @@
-mport React from 'react'
+import React from 'react'
 import styled from 'styled-components'
 
-<<<<<<< Updated upstream
-import { useAppSelector } from './hooks'
-=======
-import { useAppDispatch } from './hooks'
+import { useAppSelector, useAppDispatch } from './hooks'
 import { useAppNavigation } from './hooks/useAppNavigation'
 import { useModalManager } from './hooks/useModalManager'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import { useGameContent } from './hooks/useGameContent'
 import { toggleDevMode } from './stores/DevModeStore'
->>>>>>> Stashed changes
 
 import RoomSelectionDialog from './components/RoomSelectionDialog'
 import LoginDialog from './components/LoginDialog'
@@ -21,13 +17,10 @@ import Chat from './components/Chat'
 import HelperButtonGroup from './components/HelperButtonGroup'
 import MobileVirtualJoystick from './components/MobileVirtualJoystick'
 import MeetingRoomManager from './components/MeetingRoomManager'
-<<<<<<< Updated upstream
-=======
 import MeetingRoomChat from './components/MeetingRoomChat'
 import WorkStatusPanel from './components/WorkStatusPanel'
 import PlayerStatusModal from './components/PlayerStatusModal'
 import DevModePanel from './components/DevModePanel'
->>>>>>> Stashed changes
 
 const Backdrop = styled.div`
   position: absolute;
@@ -35,61 +28,17 @@ const Backdrop = styled.div`
   width: 100%;
 `
 
-<<<<<<< Updated upstream
-function App() {
-    const loggedIn = useAppSelector((state) => state.user.loggedIn)
-    const computerDialogOpen = useAppSelector((state) => state.computer.computerDialogOpen)
-    const whiteboardDialogOpen = useAppSelector((state) => state.whiteboard.whiteboardDialogOpen)
-    const videoConnected = useAppSelector((state) => state.user.videoConnected)
-    const roomJoined = useAppSelector((state) => state.room.roomJoined)
-
-    let ui: JSX.Element
-    if (loggedIn) {
-        if (computerDialogOpen) {
-            /* Render ComputerDialog if user is using a computer. */
-            ui = <ComputerDialog />
-        } else if (whiteboardDialogOpen) {
-            /* Render WhiteboardDialog if user is using a whiteboard. */
-            ui = <WhiteboardDialog />
-        } else {
-            ui = (
-                /* Render Chat or VideoConnectionDialog if no dialogs are opened. */
-                <>
-                    <Chat />
-                    {/* Render VideoConnectionDialog if user is not connected to a webcam. */}
-                    {!videoConnected && <VideoConnectionDialog />}
-                    <MobileVirtualJoystick />
-                    <MeetingRoomManager />
-                </>
-            )
-        }
-    } else if (roomJoined) {
-        /* Render LoginDialog if not logged in but selected a room. */
-        ui = <LoginDialog />
-    } else {
-        /* Render RoomSelectionDialog if yet selected a room. */
-        ui = <RoomSelectionDialog />
-=======
-/**
- * リファクタリング後のApp.tsx
- * 関心分離により各機能がカスタムフックに分離されている
- */
 function App() {
     const dispatch = useAppDispatch()
     
-    // ナビゲーション状態管理
     const { currentView, shouldShowVideoDialog, shouldShowHelperButtons } = useAppNavigation()
-    
-    // モーダル状態管理
     const { modals, playerStatus } = useModalManager()
     
-    // キーボードショートカット
     useKeyboardShortcuts({
         onToggleDevMode: () => dispatch(toggleDevMode()),
         onOpenPlayerStatus: () => playerStatus.open()
     })
 
-    // UI条件分岐の簡素化
     const renderMainContent = () => {
         switch (currentView) {
             case 'room-selection':
@@ -104,7 +53,6 @@ function App() {
             default:
                 return <MainGameContent />
         }
->>>>>>> Stashed changes
     }
 
     return (
@@ -134,12 +82,39 @@ function App() {
 const MainGameContent = () => {
     const { isDevMode, currentMeetingRoomId, currentRoom, userCanSendMessages } = useGameContent()
     
+    // Force render debug info
+    console.log('🔄 [MainGameContent] Render check:', {
+        currentMeetingRoomId,
+        hasCurrentRoom: !!currentRoom,
+        currentRoomName: currentRoom?.name,
+        shouldShowChat: !!(currentMeetingRoomId && currentRoom),
+        userCanSendMessages
+    })
+    
     return (
         <>
             <Chat />
             <MobileVirtualJoystick />
             <WorkStatusPanel compact />
             
+            {/* Debug visualization */}
+            {currentMeetingRoomId && (
+                <div style={{
+                    position: 'fixed',
+                    top: '10px',
+                    right: '10px',
+                    background: 'rgba(0,0,0,0.8)',
+                    color: 'white',
+                    padding: '10px',
+                    borderRadius: '5px',
+                    zIndex: 9999,
+                    fontSize: '12px'
+                }}>
+                    Room ID: {currentMeetingRoomId}<br/>
+                    Room Found: {currentRoom ? 'Yes' : 'No'}<br/>
+                    Room Name: {currentRoom?.name || 'N/A'}
+                </div>
+            )}
             
             {currentMeetingRoomId && currentRoom && (
                 <MeetingRoomChat 
